@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مختبر العرّاب للمعاينة</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --navy:        #0b0f1a;
+      --navy-mid:    #111827;
+      --charcoal:    #1a2235;
+      --charcoal-lt: #222d42;
+      --border:      #2a3a55;
+      --gold:        #c9a84c;
+      --gold-lt:     #e2c070;
+      --gold-dim:    #8a6a28;
+      --text-main:   #e8ecf4;
+      --text-sub:    #8899bb;
+      --text-muted:  #4a5a78;
+      --success:     #2e9e6b;
+      --error:       #c0392b;
+      --radius-lg:   14px;
+      --radius-md:   10px;
+      --radius-sm:   6px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.45);
+      --gold-glow:   0 0 18px rgba(201,168,76,0.18);
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--navy);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ─── TOP BAR ───────────────────────────────────────────── */
+    .topbar {
+      background: linear-gradient(90deg, #0d1320 0%, #131d30 60%, #0d1320 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .topbar::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar-logo {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(201,168,76,0.35);
+      font-family: 'Georgia', 'Times New Roman', serif;
+    }
+
+    .topbar-logo::before {
+      content: '◈';
+      font-size: 0.85rem;
+      margin-left: 7px;
+      opacity: 0.7;
+    }
+
+    .topbar-badge {
+      background: rgba(201,168,76,0.1);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topbar-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(46,158,107,0.6);
+    }
+
+    .topbar-status {
+      font-size: 0.7rem;
+      color: var(--text-sub);
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── HEADER ────────────────────────────────────────────── */
+    .header {
+      padding: 2.2rem 2.5rem 1.6rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #0f1624 0%, transparent 100%);
+      flex-shrink: 0;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .header-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 2px;
+    }
+
+    .header-tag::before {
+      content: '';
+      display: inline-block;
+      width: 18px; height: 1px;
+      background: var(--gold);
+      opacity: 0.6;
+    }
+
+    .header-h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    .header-h1 span {
+      color: var(--gold);
+    }
+
+    .header-sub {
+      font-size: 0.88rem;
+      color: var(--text-sub);
+      margin-top: 4px;
+      line-height: 1.6;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .meta-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.72rem;
+      color: var(--text-sub);
+    }
+
+    .meta-chip svg {
+      width: 13px; height: 13px;
+      fill: var(--gold);
+      flex-shrink: 0;
+    }
+
+    /* ─── NOTICE BAR ────────────────────────────────────────── */
+    .notice {
+      max-width: 1400px;
+      margin: 1rem auto 0;
+      padding: 0 2.5rem;
+      width: 100%;
+    }
+
+    .notice-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(201,168,76,0.07);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-right: 3px solid var(--gold);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    .notice-inner svg {
+      width: 15px; height: 15px;
+      fill: var(--gold);
+      flex-shrink: 0;
+    }
+
+    /* ─── WORKSPACE ─────────────────────────────────────────── */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 2.5rem 2rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 1.2rem;
+      min-height: 0;
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ─── PANEL CARD ────────────────────────────────────────── */
+    .panel {
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      min-height: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, var(--charcoal-lt) 0%, var(--charcoal) 100%);
+      flex-shrink: 0;
+    }
+
+    .panel-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .panel-label svg {
+      width: 14px; height: 14px;
+      fill: var(--gold);
+      opacity: 0.8;
+    }
+
+    .panel-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.67rem;
+      color: var(--text-muted);
+    }
+
+    .panel-indicator span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .panel-indicator.active span {
+      background: var(--success);
+      box-shadow: 0 0 6px rgba(46,158,107,0.5);
+    }
+
+    /* ─── CODE EDITOR ───────────────────────────────────────── */
+    .editor-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: 100%;
+      background: #0e1422;
+      color: #b8cce0;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      padding: 16px;
+      direction: ltr;
+      text-align: left;
+      caret-color: var(--gold);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      tab-size: 2;
+    }
+
+    .editor-textarea::placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .editor-textarea:focus {
+      box-shadow: inset 0 0 0 1px rgba(201,168,76,0.15);
+    }
+
+    .editor-textarea::-webkit-scrollbar { width: 6px; }
+    .editor-textarea::-webkit-scrollbar-track { background: transparent; }
+    .editor-textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .editor-footer {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0c1120;
+      flex-shrink: 0;
+    }
+
+    .char-count {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      direction: ltr;
+    }
+
+    .lang-badge {
+      font-size: 0.65rem;
+      color: var(--gold-dim);
+      background: rgba(201,168,76,0.08);
+      border: 1px solid rgba(201,168,76,0.15);
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── PREVIEW PANEL ─────────────────────────────────────── */
+    .preview-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0c1120;
+      min-height: 0;
+    }
+
+    .browser-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #141c2e;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .browser-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+    }
+
+    .browser-dot.red   { background: #e05252; }
+    .browser-dot.amber { background: #e0a030; }
+    .browser-dot.green { background: #50c078; }
+
+    .browser-url {
+      flex: 1;
+      background: #0e1422;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      direction: ltr;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: #fff;
+      display: block;
+    }
+
+    .preview-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: var(--text-muted);
+      padding: 2rem;
+    }
+
+    .preview-placeholder svg {
+      width: 52px; height: 52px;
+      fill: var(--text-muted);
+      opacity: 0.35;
+    }
+
+    .preview-placeholder p {
+      font-size: 0.82rem;
+      text-align: center;
+      line-height: 1.7;
+      opacity: 0.6;
+    }
+
+    /* ─── ACTION TOOLBAR ────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .toolbar-label svg {
+      width: 12px; height: 12px;
+      fill: var(--text-muted);
+    }
+
+    /* ─── BUTTONS ───────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      transition: all 0.18s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn svg {
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #b8922a 0%, #d4a840 50%, #c9963a 100%);
+      color: #0b0f1a;
+      box-shadow: 0 2px 12px rgba(201,168,76,0.3), var(--gold-glow);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #c9a840 0%, #e2be58 50%, #d4a840 100%);
+      box-shadow: 0 4px 18px rgba(201,168,76,0.45), var(--gold-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--charcoal-lt);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #2c3e5a;
+      border-color: #3a5070;
+      color: var(--text-main);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-sub);
+      border: 1px solid transparent;
+    }
+
+    .btn-ghost:hover {
+      color: #e05252;
+      border-color: rgba(224,82,82,0.25);
+      background: rgba(224,82,82,0.07);
+    }
+
+    /* ─── TOAST ─────────────────────────────────────────────── */
+    .toast-wrap {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .toast-wrap.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      font-weight: 500;
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .toast-success {
+      background: #1a3a2a;
+      border: 1px solid rgba(46,158,107,0.4);
+      color: #5dd49a;
+    }
+
+    .toast-error {
+      background: #3a1a1a;
+      border: 1px solid rgba(192,57,43,0.4);
+      color: #e57373;
+    }
+
+    .toast svg {
+      width: 16px; height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* ─── FOOTER ────────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 10px 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: #090d16;
+    }
+
+    .footer-copy {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .footer-copy span {
+      color: var(--gold-dim);
+    }
+
+    .footer-version {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* ─── RESPONSIVE ────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .panels {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+      }
+
+      .panel {
+        min-height: 360px;
+      }
+
+      .workspace {
+        padding: 1rem 1.2rem 1.5rem;
+      }
+
+      .header {
+        padding: 1.6rem 1.5rem 1.2rem;
+      }
+
+      .notice {
+        padding: 0 1.5rem;
+      }
+
+      .topbar {
+        padding: 0 1.2rem;
+      }
+
+      .header-meta {
+        display: none;
+      }
+
+      .footer {
+        padding: 10px 1.2rem;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .header-h1 {
+        font-size: 1.3rem;
+      }
+
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.77rem;
+      }
+
+      .toolbar {
+        gap: 7px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── TOP BAR ─────────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">العرّاب</div>
+      <div class="topbar-badge">Internal Tool</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-dot"></div>
+      <div class="topbar-status">الأداة نشطة</div>
+    </div>
+  </div>
+
+  <!-- ─── HEADER ──────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-titles">
+        <div class="header-tag">HTML Preview Lab</div>
+        <h1 class="header-h1">مختبر <span>العرّاب</span> للمعاينة</h1>
+        <p class="header-sub">الصق كود الصفحة، وشاهد النتيجة قبل الإطلاق.</p>
+      </div>
+      <div class="header-meta">
+        <div class="meta-chip">
+          <svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zM9.25 6v4.19l-2.97 2.97 1.06 1.06L10.75 11V6z"/></svg>
+          معاينة فورية
+        </div>
+        <div class="meta-chip">
+          <svg viewBox="0 0 20 20"><path d="M16.88 2.29A1 1 0 0016.17 2H5a1 1 0 00-.78.37l-2 2.5A1 1 0 002 5.5V17a1 1 0 001 1h14a1 1 0 001-1V3a1 1 0 00-.12-.71zM14 16H6a1 1 0 010-2h8a1 1 0 010 2zm0-4H6a1 1 0 010-2h8a1 1 0 010 2zm0-4H6a1 1 0 110-2h8a1 1 0 010 2z"/></svg>
+          HTML / CSS / JS
+        </div>
+        <div class="meta-chip">
+          <svg viewBox="0 0 20 20"><path d="M10 1a9 9 0 100 18A9 9 0 0010 1zm0 2a7 7 0 110 14A7 7 0 0110 3zm-.5 3v5h4v-1.5h-2.5V6z"/></svg>
+          لا يتطلب اتصالاً
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── NOTICE ───────────────────────────────────────────── -->
+  <div class="notice">
+    <div class="notice-inner">
+      <svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm.75 4v5h-1.5V6zm0 7v1.5h-1.5V13z"/></svg>
+      الأداة مخصصة لمراجعة الصفحات واللاندنج بيدج قبل اعتمادها أو إرسالها للعميل.
+    </div>
+  </div>
+
+  <!-- ─── WORKSPACE ────────────────────────────────────────── -->
+  <div class="workspace">
+
+    <!-- Action Toolbar -->
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnPreview">
+        <svg viewBox="0 0 20 20"><path d="M10 4C5.58 4 2 10 2 10s3.58 6 8 6 8-6 8-6-3.58-6-8-6zm0 10a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+        عرض المعاينة
+      </button>
+      <button class="btn btn-secondary" id="btnCopy">
+        <svg viewBox="0 0 20 20"><path d="M13 2H7a1 1 0 00-1 1v1H4a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1h-2V3a1 1 0 00-1-1zm-1 2v1H8V4zM5 6h10v10H5z"/></svg>
+        نسخ الكود
+      </button>
+      <button class="btn btn-ghost" id="btnClear">
+        <svg viewBox="0 0 20 20"><path d="M6 4l8 8m0-8L6 12M2 10a8 8 0 1016 0A8 8 0 002 10z"/></svg>
+        مسح الكود
+      </button>
+      <div class="toolbar-label">
+        <svg viewBox="0 0 20 20"><path d="M17 9V7l-2-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1v2L3 7v2h1v8a1 1 0 001 1h10a1 1 0 001-1V9zm-7 7H8v-4h2zm4 0h-2v-4h2z"/></svg>
+        أداة داخلية — العرّاب
+      </div>
+    </div>
+
+    <!-- Main Panels -->
+    <div class="panels">
+
+      <!-- Left: Code Editor -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-label">
+            <svg viewBox="0 0 20 20"><path d="M5.59 3.41L1 8l4.59 4.59L7 11.17 3.83 8 7 4.83zM14.41 3.41L13 4.83 16.17 8 13 11.17l1.41 1.42L19 8z"/></svg>
+            كود HTML
+          </div>
+          <div class="panel-indicator" id="editorIndicator">
+            <span></span>
+            فارغ
+          </div>
+        </div>
+        <div class="editor-wrap">
+          <textarea
+            class="editor-textarea"
+            id="htmlEditor"
+            placeholder="الصق كود HTML هنا..."
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+        </div>
+        <div class="editor-footer">
+          <span class="char-count" id="charCount">0 حرف</span>
+          <span class="lang-badge">HTML</span>
+        </div>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-label">
+            <svg viewBox="0 0 20 20"><path d="M10 4C5.58 4 2 10 2 10s3.58 6 8 6 8-6 8-6-3.58-6-8-6zm0 10a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+            المعاينة
+          </div>
+          <div class="panel-indicator" id="previewIndicator">
+            <span></span>
+            في الانتظار
+          </div>
+        </div>
+        <div class="preview-wrap">
+          <div class="browser-bar">
+            <div class="browser-dots">
+              <div class="browser-dot red"></div>
+              <div class="browser-dot amber"></div>
+              <div class="browser-dot green"></div>
+            </div>
+            <div class="browser-url" id="browserUrl">about:blank</div>
+          </div>
+          <!-- Placeholder shown before first render -->
+          <div class="preview-placeholder" id="previewPlaceholder">
+            <svg viewBox="0 0 64 64"><path d="M58 8H6a2 2 0 00-2 2v44a2 2 0 002 2h52a2 2 0 002-2V10a2 2 0 00-2-2zm-2 44H8V20h48zM8 16v-4h48v4z"/><circle cx="13" cy="14" r="2"/><circle cx="21" cy="14" r="2"/><circle cx="29" cy="14" r="2"/></svg>
+            <p>اضغط على "عرض المعاينة"<br/>لرؤية نتيجة الكود هنا</p>
+          </div>
+          <!-- Actual iframe, hidden until first render -->
+          <iframe
+            id="previewFrame"
+            class="preview-iframe"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+            title="HTML Preview"
+            style="display:none;"
+          ></iframe>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── FOOTER ───────────────────────────────────────────── -->
+  <div class="footer">
+    <div class="footer-copy">© 2025 <span>العرّاب</span> — جميع الحقوق محفوظة</div>
+    <div class="footer-version">v1.0.0 — Internal</div>
+  </div>
+
+  <!-- ─── TOAST ────────────────────────────────────────────── -->
+  <div class="toast-wrap" id="toastWrap">
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- ─── SCRIPT ───────────────────────────────────────────── -->
+  <script>
+    (function () {
+      'use strict';
+
+      const editor          = document.getElementById('htmlEditor');
+      const previewFrame    = document.getElementById('previewFrame');
+      const previewPlaceholder = document.getElementById('previewPlaceholder');
+      const btnPreview      = document.getElementById('btnPreview');
+      const btnCopy         = document.getElementById('btnCopy');
+      const btnClear        = document.getElementById('btnClear');
+      const charCount       = document.getElementById('charCount');
+      const editorIndicator = document.getElementById('editorIndicator');
+      const previewIndicator= document.getElementById('previewIndicator');
+      const browserUrl      = document.getElementById('browserUrl');
+      const toastWrap       = document.getElementById('toastWrap');
+      const toast           = document.getElementById('toast');
+
+      let toastTimer = null;
+
+      // ─── CHAR COUNT & INDICATOR ────────────────────────────
+      editor.addEventListener('input', function () {
+        const len = editor.value.length;
+        charCount.textContent = len.toLocaleString('ar-SA') + ' حرف';
+
+        if (len > 0) {
+          editorIndicator.classList.add('active');
+          editorIndicator.innerHTML = '<span></span>يحتوي على كود';
+        } else {
+          editorIndicator.classList.remove('active');
+          editorIndicator.innerHTML = '<span></span>فارغ';
+        }
+      });
+
+      // ─── SHOW TOAST ────────────────────────────────────────
+      function showToast(message, type) {
+        if (toastTimer) clearTimeout(toastTimer);
+
+        var iconSuccess = '<svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm-1.5 10.94L5.56 10l1.06-1.06 1.88 1.88 4.94-4.94L14.5 7z"/></svg>';
+        var iconError   = '<svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm.75 4v5h-1.5V6zm0 7v1.5h-1.5V13z"/></svg>';
+
+        toast.className = 'toast toast-' + type;
+        toast.innerHTML = (type === 'success' ? iconSuccess : iconError) + message;
+
+        toastWrap.classList.add('show');
+        toastTimer = setTimeout(function () {
+          toastWrap.classList.remove('show');
+        }, 2800);
+      }
+
+      // ─── PREVIEW ───────────────────────────────────────────
+      btnPreview.addEventListener('click', function () {
+        var code = editor.value.trim();
+
+        if (!code) {
+          showToast('لا يوجد كود للمعاينة. الصق كود HTML أولاً.', 'error');
+          editor.focus();
+          return;
+        }
+
+        previewPlaceholder.style.display = 'none';
+        previewFrame.style.display = 'block';
+
+        var doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
+
+        previewIndicator.classList.add('active');
+        previewIndicator.innerHTML = '<span></span>جارٍ العرض';
+        browserUrl.textContent = 'preview://landing-page — العرّاب';
+
+        showToast('تمّت المعاينة بنجاح ✓', 'success');
+      });
+
+      // ─── COPY ──────────────────────────────────────────────
+      btnCopy.addEventListener('click', function () {
+        var code = editor.value;
+
+        if (!code.trim()) {
+          showToast('لا يوجد كود للنسخ.', 'error');
+          return;
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(code).then(function () {
+            showToast('تمّ نسخ الكود إلى الحافظة.', 'success');
+          }).catch(function () {
+            fallbackCopy(code);
+          });
+        } else {
+          fallbackCopy(code);
+        }
+      });
+
+      function fallbackCopy(text) {
+        var tmp = document.createElement('textarea');
+        tmp.value = text;
+        tmp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+        document.body.appendChild(tmp);
+        tmp.select();
+        try {
+          document.execCommand('copy');
+          showToast('تمّ نسخ الكود إلى الحافظة.', 'success');
+        } catch (e) {
+          showToast('تعذّر النسخ. حاول يدوياً.', 'error');
+        }
+        document.body.removeChild(tmp);
+      }
+
+      // ─── CLEAR ─────────────────────────────────────────────
+      btnClear.addEventListener('click', function () {
+        if (!editor.value.trim()) return;
+
+        editor.value = '';
+        charCount.textContent = '0 حرف';
+
+        editorIndicator.classList.remove('active');
+        editorIndicator.innerHTML = '<span></span>فارغ';
+
+        previewFrame.style.display = 'none';
+        previewPlaceholder.style.display = '';
+
+        try {
+          var doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+          doc.open();
+          doc.write('');
+          doc.close();
+        } catch (e) {}
+
+        previewIndicator.classList.remove('active');
+        previewIndicator.innerHTML = '<span></span>في الانتظار';
+        browserUrl.textContent = 'about:blank';
+
+        showToast('تمّ مسح الكود والمعاينة.', 'success');
+        editor.focus();
+      });
+
+      // ─── TAB KEY SUPPORT IN EDITOR ─────────────────────────
+      editor.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          var start = editor.selectionStart;
+          var end   = editor.selectionEnd;
+          editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + 2;
+          editor.dispatchEvent(new Event('input'));
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>
