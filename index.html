@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة المبيعات - CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { font-family: 'Cairo', sans-serif; }
+  body { background:#0b0e14; color:#e6e8ec; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:#11151c; }
+  ::-webkit-scrollbar-thumb { background:#2a2f3a; border-radius:4px; }
+  .card { background:#11151c; border:1px solid #1f2530; border-radius:14px; }
+  .card-soft { background:#161b24; border:1px solid #1f2530; border-radius:12px; }
+  .input { background:#0d1117; border:1px solid #232a36; border-radius:10px; padding:10px 14px; color:#e6e8ec; outline:none; transition:.15s; }
+  .input:focus { border-color:#5b8def; }
+  .btn { border-radius:10px; padding:10px 18px; font-weight:600; transition:.15s; cursor:pointer; }
+  .btn-primary { background:#5b8def; color:#fff; }
+  .btn-primary:hover { background:#4a78d8; }
+  .btn-ghost { background:#1a2030; color:#c7cbd4; }
+  .btn-ghost:hover { background:#222a3c; }
+  .btn-danger { background:#3a1f24; color:#ef6b6b; }
+  .btn-danger:hover { background:#4a262d; }
+  .btn-success { background:#16331f; color:#5fd084; }
+  .btn-success:hover { background:#1c4029; }
+  .tag { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .tab-active { background:#5b8def; color:#fff; }
+  .tab { background:transparent; color:#9aa2b1; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:right; font-size:12px; color:#7d8595; font-weight:600; padding:10px 12px; border-bottom:1px solid #1f2530; }
+  td { padding:10px 12px; border-bottom:1px solid #161b24; font-size:14px; }
+  tr:hover td { background:#11151c; }
+  .modal-bg { background:rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+  .stage-pill { font-size:11px; padding:3px 9px; border-radius:20px; font-weight:700; }
+  .hidden-x { display:none; }
+  .glow { box-shadow: 0 0 0 1px rgba(91,141,239,.3), 0 8px 24px rgba(91,141,239,.08); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="app"></div>
+
+<script>
+/* ======================= SUPABASE CONFIG ======================= */
+/* استبدل القيمتين التاليتين ببيانات مشروعك على Supabase */
+const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) { console.warn("Supabase init failed", e); }
+
+/* ======================= APP STATE ======================= */
+const STAGES = [
+  { key: "new",        label: "عميل جديد",         color: "#8b93a3", bg: "#1c2029" },
+  { key: "contacted",  label: "تم الاتصال",        color: "#5b8def", bg: "#15233f" },
+  { key: "qualified",  label: "مؤهل - تحويل للمبيعات", color: "#d6a93b", bg: "#3a2f15" },
+  { key: "meeting",    label: "اجتماع محدد",       color: "#a35bef", bg: "#2a1f3f" },
+  { key: "won",        label: "تم الإغلاق - ناجح", color: "#5fd084", bg: "#15331f" },
+  { key: "lost",       label: "تم الإغلاق - فاشل", color: "#ef6b6b", bg: "#3a1f24" },
+];
+function stageInfo(key){ return STAGES.find(s=>s.key===key) || STAGES[0]; }
+
+let state = {
+  currentUser: null, // {id, name, role}
+  users: [],
+  leads: [],
+  activities: [],
+  view: "login",
+  activeTab: "list",
+};
+
+/* ======================= HELPERS ======================= */
+const $ = (sel, parent=document) => parent.querySelector(sel);
+const el = (html) => { const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; };
+function fmtDate(d){ if(!d) return "-"; const dt=new Date(d); return dt.toLocaleDateString('ar-SA',{year:'numeric',month:'2-digit',day:'2-digit'}) + " " + dt.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}); }
+function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2); }
+function toast(msg, type="info"){
+  const colors = { info:"#5b8def", success:"#5fd084", error:"#ef6b6b" };
+  const t = el(`<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#11151c;border:1px solid ${colors[type]};color:#fff;padding:12px 22px;border-radius:12px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:14px;">${msg}</div>`);
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+
+/* ======================= DATA LAYER (Supabase) ======================= */
+async function dbLoadAll(){
+  if(!supabase) return;
+  const [{data:users}, {data:leads}, {data:activities}] = await Promise.all([
+    supabase.from('users').select('*'),
+    supabase.from('leads').select('*').order('created_at',{ascending:false}),
+    supabase.from('activities').select('*').order('timestamp',{ascending:false}),
+  ]);
+  state.users = users || [];
+  state.leads = leads || [];
+  state.activities = activities || [];
+}
+
+async function dbLogin(name, password){
+  if(!supabase) return null;
+  const { data, error } = await supabase.from('users').select('*').eq('name', name).eq('password', password).maybeSingle();
+  if(error){ console.error(error); return null; }
+  return data;
+}
+
+async function dbInsertLead(lead){
+  if(!supabase) return;
+  const { data, error } = await supabase.from('leads').insert(lead).select().maybeSingle();
+  if(error) { toast("خطأ بالحفظ: "+error.message, "error"); return null; }
+  return data;
+}
+
+async function dbUpdateLead(id, patch){
+  if(!supabase) return;
+  patch.updated_at = new Date().toISOString();
+  const { error } = await supabase.from('leads').update(patch).eq('id', id);
+  if(error) toast("خطأ بالتحديث: "+error.message, "error");
+}
+
+async function dbAddActivity(activity){
+  if(!supabase) return;
+  const { error } = await supabase.from('activities').insert(activity);
+  if(error) console.error(error);
+}
+
+async function logActivity(lead_id, action, note){
+  const activity = { id: uuid(), lead_id, user: state.currentUser?.name || "system", action, note: note||"", timestamp: new Date().toISOString() };
+  state.activities.unshift(activity);
+  await dbAddActivity(activity);
+}
+
+/* ======================= RENDER ROOT ======================= */
+function render(){
+  const app = $("#app");
+  app.innerHTML = "";
+  if(state.view === "login"){
+    app.appendChild(renderLogin());
+  } else {
+    app.appendChild(renderShell());
+  }
+}
+
+/* ======================= LOGIN ======================= */
+function renderLogin(){
+  const wrap = el(`
+    <div class="min-h-screen flex items-center justify-center px-4">
+      <div class="card glow p-8 w-full max-w-md">
+        <div class="text-center mb-8">
+          <div class="text-3xl font-extrabold text-white mb-1">نظام إدارة المبيعات</div>
+          <div class="text-sm text-[#7d8595]">تسجيل الدخول للمتابعة</div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-[#9aa2b1] block mb-1">اسم المستخدم</label>
+            <input id="login-name" class="input w-full" placeholder="اكتب اسمك">
+          </div>
+          <div>
+            <label class="text-xs text-[#9aa2b1] block mb-1">كلمة المرور</label>
+            <input id="login-pass" type="password" class="input w-full" placeholder="••••••••">
+          </div>
+          <div id="login-error" class="text-[#ef6b6b] text-sm hidden-x"></div>
+          <button id="login-btn" class="btn btn-primary w-full text-base mt-2">دخول</button>
+        </div>
+        <div class="text-center text-xs text-[#5a6172] mt-6">منصة CRM لإدارة العملاء وفريق المبيعات</div>
+      </div>
+    </div>
+  `);
+  const doLogin = async () => {
+    const name = $("#login-name", wrap).value.trim();
+    const pass = $("#login-pass", wrap).value.trim();
+    const errBox = $("#login-error", wrap);
+    if(!name || !pass){ errBox.textContent = "أدخل اسم المستخدم وكلمة المرور"; errBox.classList.remove("hidden-x"); return; }
+    const btn = $("#login-btn", wrap);
+    btn.textContent = "جاري الدخول..."; btn.disabled = true;
+    const user = await dbLogin(name, pass);
+    btn.textContent = "دخول"; btn.disabled = false;
+    if(!user){ errBox.textContent = "بيانات الدخول غير صحيحة"; errBox.classList.remove("hidden-x"); return; }
+    state.currentUser = user;
+    await dbLoadAll();
+    state.view = "app";
+    state.activeTab = user.role === "manager" ? "dashboard" : "list";
+    render();
+  };
+  $("#login-btn", wrap).addEventListener("click", doLogin);
+  wrap.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doLogin(); });
+  return wrap;
+}
+
+/* ======================= SHELL ======================= */
+function renderShell(){
+  const role = state.currentUser.role;
+  const tabs = role === "manager"
+    ? [["dashboard","لوحة التحكم"],["list","كل العملاء"],["import","استيراد بيانات"],["team","الفريق"]]
+    : role === "tele"
+    ? [["list","عملائي"],["import","استيراد بيانات"]]
+    : [["list","عملائي المحوّلة"]];
+
+  const wrap = el(`
+    <div class="min-h-screen">
+      <header class="border-b border-[#1f2530] px-6 py-4 flex items-center justify-between sticky top-0 bg-[#0b0e14] z-40">
+        <div class="flex items-center gap-3">
+          <div class="text-xl font-extrabold text-white">CRM</div>
+          <div class="text-[#5a6172] text-sm">|</div>
+          <div class="text-sm text-[#9aa2b1]">${roleLabel(role)}</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-sm text-[#c7cbd4]">${state.currentUser.name}</div>
+          <button id="logout-btn" class="btn btn-ghost text-sm">تسجيل الخروج</button>
+        </div>
+      </header>
+      <nav class="flex gap-2 px-6 pt-4">
+        ${tabs.map(([key,label]) => `<button data-tab="${key}" class="btn tab ${state.activeTab===key?'tab-active':''} text-sm">${label}</button>`).join("")}
+      </nav>
+      <main id="main-content" class="p-6"></main>
+    </div>
+  `);
+  wrap.querySelectorAll("[data-tab]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ state.activeTab = btn.dataset.tab; render(); });
+  });
+  $("#logout-btn", wrap).addEventListener("click", ()=>{
+    state.currentUser = null; state.view = "login"; render();
+  });
+
+  const main = $("#main-content", wrap);
+  if(state.activeTab === "dashboard") main.appendChild(renderDashboard());
+  else if(state.activeTab === "list") main.appendChild(renderLeadsList());
+  else if(state.activeTab === "import") main.appendChild(renderImport());
+  else if(state.activeTab === "team") main.appendChild(renderTeam());
+  return wrap;
+}
+
+function roleLabel(role){
+  return role === "manager" ? "مدير" : role === "tele" ? "تيلي سيلز" : "مبيعات";
+}
+
+/* ======================= LEADS LIST (role-aware) ======================= */
+function visibleLeads(){
+  const role = state.currentUser.role;
+  if(role === "manager") return state.leads;
+  if(role === "tele") return state.leads.filter(l => l.assigned_tele === state.currentUser.name);
+  if(role === "sales") return state.leads.filter(l => l.assigned_sales === state.currentUser.name);
+  return [];
+}
+
+function renderLeadsList(){
+  const role = state.currentUser.role;
+  const leads = visibleLeads();
+  const wrap = el(`
+    <div>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div class="text-lg font-bold text-white">${role==='manager' ? 'كل العملاء' : 'عملائي'} <span class="text-[#7d8595] text-sm">(${leads.length})</span></div>
+        <div class="flex gap-2 items-center">
+          <input id="search-box" class="input text-sm" placeholder="بحث بالاسم أو الجوال" style="width:240px">
+          ${role!=='sales' ? `<button id="new-lead-btn" class="btn btn-primary text-sm">+ عميل جديد</button>` : ``}
+        </div>
+      </div>
+      <div class="card overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th><th>الجوال</th><th>المصدر</th><th>الحالة</th>
+              ${role==='manager' ? '<th>تيلي</th><th>مبيعات</th>' : ''}
+              <th>آخر تحديث</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  `);
+
+  const tbody = $("#leads-tbody", wrap);
+  function paint(filter=""){
+    const f = filter.trim().toLowerCase();
+    const rows = leads.filter(l => !f || (l.name||"").toLowerCase().includes(f) || (l.phone||"").includes(f));
+    tbody.innerHTML = rows.map(l => {
+      const si = stageInfo(l.stage);
+      return `
+        <tr data-id="${l.id}" class="cursor-pointer">
+          <td class="text-white font-medium">${l.name||"-"}</td>
+          <td class="text-[#9aa2b1]">${l.phone||"-"}</td>
+          <td class="text-[#9aa2b1]">${l.source||"-"}</td>
+          <td><span class="stage-pill" style="background:${si.bg};color:${si.color}">${si.label}</span></td>
+          ${role==='manager' ? `<td class="text-[#9aa2b1]">${l.assigned_tele||"-"}</td><td class="text-[#9aa2b1]">${l.assigned_sales||"-"}</td>` : ''}
+          <td class="text-[#7d8595] text-xs">${fmtDate(l.updated_at||l.created_at)}</td>
+          <td><button class="btn btn-ghost text-xs open-lead" data-id="${l.id}">فتح</button></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="8" class="text-center text-[#5a6172] py-10">لا توجد بيانات</td></tr>`;
+    tbody.querySelectorAll(".open-lead").forEach(b=>{
+      b.addEventListener("click", ()=> openLeadModal(b.dataset.id));
+    });
+  }
+  paint();
+  $("#search-box", wrap).addEventListener("input", (e)=> paint(e.target.value));
+  if(role!=='sales'){
+    $("#new-lead-btn", wrap)?.addEventListener("click", ()=> openLeadModal(null));
+  }
+  return wrap;
+}
+
+/* ======================= LEAD MODAL ======================= */
+function openLeadModal(leadId){
+  const role = state.currentUser.role;
+  const isNew = !leadId;
+  const lead = isNew ? { id: uuid(), name:"", phone:"", source:"", stage:"new", assigned_tele: role==='tele'?state.currentUser.name:"", assigned_sales:"", notes:"", created_at:new Date().toISOString() } : state.leads.find(l=>l.id===leadId);
+  const leadActivities = state.activities.filter(a=>a.lead_id===lead.id);
+  const teleUsers = state.users.filter(u=>u.role==='tele');
+  const salesUsers = state.users.filter(u=>u.role==='sales');
+
+  const bg = el(`<div class="fixed inset-0 modal-bg flex items-center justify-center z-50 p-4"></div>`);
+  const canEditBasic = isNew || role==='manager' || (role==='tele' && lead.assigned_tele===state.currentUser.name);
+  const canQualify = role==='tele' || role==='manager';
+  const canSales = role==='sales' || role==='manager';
+
+  const modal = el(`
+    <div class="card glow p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <div class="text-lg font-bold text-white">${isNew ? "إضافة عميل جديد" : "تفاصيل العميل"}</div>
+        <button id="close-modal" class="btn btn-ghost text-sm">إغلاق</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">اسم العميل / المتجر</label>
+          <input id="f-name" class="input w-full" value="${lead.name||""}" ${canEditBasic?"":"disabled"}>
+        </div>
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">رقم الجوال</label>
+          <input id="f-phone" class="input w-full" value="${lead.phone||""}" ${canEditBasic?"":"disabled"}>
+        </div>
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">المصدر</label>
+          <input id="f-source" class="input w-full" value="${lead.source||""}" ${canEditBasic?"":"disabled"}>
+        </div>
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">الحالة الحالية</label>
+          <div><span class="stage-pill" style="background:${stageInfo(lead.stage).bg};color:${stageInfo(lead.stage).color}">${stageInfo(lead.stage).label}</span></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">تيلي سيلز المسؤول</label>
+          <select id="f-tele" class="input w-full" ${role==='manager'?'':'disabled'}>
+            <option value="">-- بدون --</option>
+            ${teleUsers.map(u=>`<option value="${u.name}" ${lead.assigned_tele===u.name?'selected':''}>${u.name}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-[#9aa2b1] block mb-1">مندوب مبيعات</label>
+          <select id="f-sales" class="input w-full" ${role==='manager' || role==='tele' ?'':'disabled'}>
+            <option value="">-- بدون --</option>
+            ${salesUsers.map(u=>`<option value="${u.name}" ${lead.assigned_sales===u.name?'selected':''}>${u.name}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="text-xs text-[#9aa2b1] block mb-1">ملاحظة جديدة</label>
+        <textarea id="f-note" class="input w-full" rows="2" placeholder="اكتب ملاحظة..."></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-5">
+        ${isNew ? `<button id="save-new" class="btn btn-primary text-sm">حفظ العميل</button>` : `
+          ${canQualify && lead.stage!=='qualified' ? `<button id="mark-contacted" class="btn btn-ghost text-sm">تحديد كـ "تم الاتصال"</button>` : ''}
+          ${canQualify ? `<button id="mark-qualified" class="btn btn-primary text-sm">تأهيل وتحويل للمبيعات</button>` : ''}
+          ${canSales ? `<button id="mark-meeting" class="btn btn-ghost text-sm">تحديد اجتماع</button>` : ''}
+          ${canSales ? `<button id="mark-won" class="btn btn-success text-sm">إغلاق ناجح ✓</button>` : ''}
+          ${canSales ? `<button id="mark-lost" class="btn btn-danger text-sm">إغلاق فاشل ✕</button>` : ''}
+          <button id="save-edit" class="btn btn-ghost text-sm">حفظ التعديلات</button>
+        `}
+      </div>
+
+      ${!isNew ? `
+      <div>
+        <div class="text-sm font-bold text-white mb-2">سجل النشاط</div>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          ${leadActivities.length ? leadActivities.map(a=>`
+            <div class="card-soft p-3 text-xs">
+              <div class="flex justify-between text-[#7d8595] mb-1"><span>${a.user}</span><span>${fmtDate(a.timestamp)}</span></div>
+              <div class="text-[#c7cbd4]">${a.action}${a.note ? " — "+a.note : ""}</div>
+            </div>
+          `).join("") : `<div class="text-[#5a6172] text-xs">لا يوجد نشاط بعد</div>`}
+        </div>
+      </div>` : ``}
+    </div>
+  `);
+  bg.appendChild(modal);
+  document.body.appendChild(bg);
+  $("#close-modal", modal).addEventListener("click", ()=> bg.remove());
+  bg.addEventListener("click", (e)=>{ if(e.target===bg) bg.remove(); });
+
+  const readForm = () => ({
+    name: $("#f-name", modal).value.trim(),
+    phone: $("#f-phone", modal).value.trim(),
+    source: $("#f-source", modal).value.trim(),
+    assigned_tele: $("#f-tele", modal).value,
+    assigned_sales: $("#f-sales", modal).value,
+  });
+  const note = () => $("#f-note", modal).value.trim();
+
+  if(isNew){
+    $("#save-new", modal).addEventListener("click", async ()=>{
+      const f = readForm();
+      if(!f.name || !f.phone){ toast("الاسم والجوال مطلوبان","error"); return; }
+      const newLead = { ...lead, ...f, stage:"new" };
+      const saved = await dbInsertLead(newLead);
+      state.leads.unshift(saved || newLead);
+      await logActivity(newLead.id, "إضافة عميل جديد", "");
+      toast("تم إضافة العميل بنجاح","success");
+      bg.remove(); render();
+    });
+  } else {
+    const updateAndClose = async (patch, action, noteText) => {
+      Object.assign(lead, patch);
+      await dbUpdateLead(lead.id, patch);
+      await logActivity(lead.id, action, noteText);
+      toast(action, "success");
+      bg.remove(); render();
+    };
+    $("#save-edit", modal)?.addEventListener("click", ()=>{
+      const f = readForm();
+      const n = note();
+      updateAndClose(f, "تحديث بيانات العميل", n);
+    });
+    $("#mark-contacted", modal)?.addEventListener("click", ()=>{
+      updateAndClose({ stage:"contacted", ...readForm() }, "تم الاتصال بالعميل", note());
+    });
+    $("#mark-qualified", modal)?.addEventListener("click", ()=>{
+      const f = readForm();
+      if(!f.assigned_sales){ toast("اختر مندوب مبيعات لتحويل العميل","error"); return; }
+      updateAndClose({ stage:"qualified", ...f }, "تأهيل العميل وتحويله للمبيعات", note());
+    });
+    $("#mark-meeting", modal)?.addEventListener("click", ()=>{
+      updateAndClose({ stage:"meeting", ...readForm() }, "تحديد اجتماع مع العميل", note());
+    });
+    $("#mark-won", modal)?.addEventListener("click", ()=>{
+      const reason = prompt("سبب/ملخص الإغلاق الناجح:") || "";
+      updateAndClose({ stage:"won", ...readForm() }, "إغلاق ناجح ✓", reason);
+    });
+    $("#mark-lost", modal)?.addEventListener("click", ()=>{
+      const reason = prompt("سبب الإغلاق الفاشل:") || "";
+      updateAndClose({ stage:"lost", ...readForm() }, "إغلاق فاشل ✕", reason);
+    });
+  }
+}
+
+/* ======================= IMPORT (Excel) ======================= */
+function renderImport(){
+  const wrap = el(`
+    <div class="max-w-xl">
+      <div class="text-lg font-bold text-white mb-4">استيراد عملاء من ملف Excel</div>
+      <div class="card p-6">
+        <p class="text-sm text-[#9aa2b1] mb-4">الأعمدة المطلوبة في الملف: <b class="text-white">name, phone, source</b> (الصف الأول عناوين الأعمدة)</p>
+        <input id="excel-file" type="file" accept=".xlsx,.xls,.csv" class="input w-full mb-4">
+        <button id="import-btn" class="btn btn-primary text-sm">استيراد</button>
+        <div id="import-result" class="text-sm mt-4"></div>
+      </div>
+    </div>
+  `);
+  $("#import-btn", wrap).addEventListener("click", async ()=>{
+    const fileInput = $("#excel-file", wrap);
+    const file = fileInput.files[0];
+    const resultBox = $("#import-result", wrap);
+    if(!file){ resultBox.innerHTML = `<span class="text-[#ef6b6b]">اختر ملف أولاً</span>`; return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        let count = 0;
+        for(const row of rows){
+          const name = row.name || row["الاسم"] || "";
+          const phone = String(row.phone || row["الجوال"] || "").trim();
+          const source = row.source || row["المصدر"] || "استيراد إكسل";
+          if(!name && !phone) continue;
+          const newLead = {
+            id: uuid(), name, phone, source, stage:"new",
+            assigned_tele: state.currentUser.role==='tele' ? state.currentUser.name : "",
+            assigned_sales:"", notes:"", created_at: new Date().toISOString()
+          };
+          const saved = await dbInsertLead(newLead);
+          state.leads.unshift(saved || newLead);
+          await logActivity(newLead.id, "استيراد عميل من ملف Excel", "");
+          count++;
+        }
+        resultBox.innerHTML = `<span class="text-[#5fd084]">تم استيراد ${count} عميل بنجاح ✓</span>`;
+        toast(`تم استيراد ${count} عميل`, "success");
+      } catch(err){
+        console.error(err);
+        resultBox.innerHTML = `<span class="text-[#ef6b6b]">خطأ في قراءة الملف</span>`;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  return wrap;
+}
+
+/* ======================= TEAM (manager) ======================= */
+function renderTeam(){
+  const wrap = el(`
+    <div>
+      <div class="text-lg font-bold text-white mb-4">أعضاء الفريق</div>
+      <div class="card overflow-x-auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>الدور</th><th>عدد العملاء</th></tr></thead>
+          <tbody>
+            ${state.users.map(u=>{
+              const count = state.leads.filter(l=>l.assigned_tele===u.name || l.assigned_sales===u.name).length;
+              return `<tr><td class="text-white">${u.name}</td><td class="text-[#9aa2b1]">${roleLabel(u.role)}</td><td class="text-[#9aa2b1]">${count}</td></tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+  return wrap;
+}
+
+/* ======================= DASHBOARD (manager) ======================= */
+function renderDashboard(){
+  const leads = state.leads;
+  const total = leads.length;
+  const byStage = {};
+  STAGES.forEach(s => byStage[s.key] = leads.filter(l=>l.stage===s.key).length);
+  const won = byStage.won || 0;
+  const lost = byStage.lost || 0;
+  const closed = won + lost;
+  const conversion = total ? Math.round((won/total)*100) : 0;
+  const closeRate = closed ? Math.round((won/closed)*100) : 0;
+
+  const teleStats = state.users.filter(u=>u.role==='tele').map(u=>{
+    const assigned = leads.filter(l=>l.assigned_tele===u.name);
+    const qualified = assigned.filter(l=>['qualified','meeting','won','lost'].includes(l.stage)).length;
+    return { name:u.name, total: assigned.length, qualified, rate: assigned.length ? Math.round(qualified/assigned.length*100) : 0 };
+  });
+  const salesStats = state.users.filter(u=>u.role==='sales').map(u=>{
+    const assigned = leads.filter(l=>l.assigned_sales===u.name);
+    const won_ = assigned.filter(l=>l.stage==='won').length;
+    const closed_ = assigned.filter(l=>l.stage==='won'||l.stage==='lost').length;
+    return { name:u.name, total: assigned.length, won: won_, rate: closed_ ? Math.round(won_/closed_*100) : 0 };
+  });
+
+  const wrap = el(`
+    <div class="space-y-6">
+      <div class="grid grid-cols-4 gap-4">
+        <div class="card p-5"><div class="text-xs text-[#9aa2b1] mb-1">إجمالي العملاء</div><div class="text-2xl font-extrabold text-white">${total}</div></div>
+        <div class="card p-5"><div class="text-xs text-[#9aa2b1] mb-1">صفقات مغلقة</div><div class="text-2xl font-extrabold text-white">${closed}</div></div>
+        <div class="card p-5"><div class="text-xs text-[#9aa2b1] mb-1">نسبة التحويل الكلية</div><div class="text-2xl font-extrabold text-[#5fd084]">${conversion}%</div></div>
+        <div class="card p-5"><div class="text-xs text-[#9aa2b1] mb-1">نسبة الفوز بالصفقات</div><div class="text-2xl font-extrabold text-[#5b8def]">${closeRate}%</div></div>
+      </div>
+
+      <div class="card p-5">
+        <div class="text-sm font-bold text-white mb-4">توزيع العملاء على مراحل المسار</div>
+        <div class="grid grid-cols-6 gap-3">
+          ${STAGES.map(s=>`
+            <div class="card-soft p-4 text-center">
+              <div class="text-xl font-extrabold" style="color:${s.color}">${byStage[s.key]||0}</div>
+              <div class="text-xs text-[#9aa2b1] mt-1">${s.label}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div class="card p-5">
+          <div class="text-sm font-bold text-white mb-4">أداء فريق التيلي سيلز</div>
+          <table>
+            <thead><tr><th>الاسم</th><th>إجمالي</th><th>مؤهل</th><th>النسبة</th></tr></thead>
+            <tbody>
+              ${teleStats.map(t=>`<tr><td class="text-white">${t.name}</td><td class="text-[#9aa2b1]">${t.total}</td><td class="text-[#9aa2b1]">${t.qualified}</td><td class="text-[#5b8def] font-bold">${t.rate}%</td></tr>`).join("") || `<tr><td colspan="4" class="text-center text-[#5a6172] py-6">لا يوجد بيانات</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm font-bold text-white mb-4">أداء فريق المبيعات</div>
+          <table>
+            <thead><tr><th>الاسم</th><th>إجمالي</th><th>صفقات ناجحة</th><th>النسبة</th></tr></thead>
+            <tbody>
+              ${salesStats.map(t=>`<tr><td class="text-white">${t.name}</td><td class="text-[#9aa2b1]">${t.total}</td><td class="text-[#5fd084]">${t.won}</td><td class="text-[#5fd084] font-bold">${t.rate}%</td></tr>`).join("") || `<tr><td colspan="4" class="text-center text-[#5a6172] py-6">لا يوجد بيانات</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `);
+  return wrap;
+}
+
+/* ======================= INIT ======================= */
+render();
+</script>
+</body>
+</html>
