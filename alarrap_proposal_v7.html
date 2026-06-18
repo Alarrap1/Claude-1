@@ -326,12 +326,13 @@ body[data-anim="none"] .slide.ein{opacity:1}
 
 /* free drag mode - NO transitions on elements to avoid lag */
 .slide.drag-mode .s-cnt,.slide.drag-applied .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
-.slide.drag-mode [data-ie="1"],.slide.drag-applied [data-ie="1"]{position:absolute!important;pointer-events:all!important;transition:none!important;user-select:none}
+.slide.drag-mode .s-cnt>*,.slide.drag-applied .s-cnt>*{position:absolute!important}
+.slide.drag-mode [data-ie="1"],.slide.drag-applied [data-ie="1"]{pointer-events:all!important;transition:none!important;user-select:none}
 .slide.drag-mode [data-ie="1"]{cursor:grab;outline:1px dashed rgba(200,121,74,.5);border-radius:4px}
 .slide.drag-mode [data-ie="1"].dg-sel{outline:2px solid var(--gold)!important;cursor:grab;z-index:40}
 .slide.drag-mode [data-ie="1"].dg-dragging{cursor:grabbing!important;z-index:50;outline:2px solid var(--gold2)!important}
 .slide.drag-applied [data-ie="1"]{cursor:pointer}
-/* also kill sa transitions in drag */
+/* kill sa transitions in drag so nothing flickers */
 .slide.drag-mode .sa,.slide.drag-applied .sa{transition:none!important;opacity:1!important;transform:none!important}
 
 /* resize handles */
@@ -1614,26 +1615,49 @@ function _enterDrag(sl,idx){
   if(!sl)return;
   _dgSl=sl; _dgSid=(CFG[idx]||{}).id;
   var saved=_dgSid&&S[_dgSid]&&S[_dgSid]._elPos||{};
+  var savedSnt=_dgSid&&S[_dgSid]&&S[_dgSid]._sntPos||{};
   if(sl.classList.contains('drag-applied')){
     sl.classList.remove('drag-applied');
     sl.classList.add('drag-mode');
+    /* restore non-draggable sibling positions */
+    var cnt2=sl.querySelector('.s-cnt');
+    if(cnt2)Array.from(cnt2.children).forEach(function(el){
+      if(el.dataset&&el.dataset.ie==='1')return;
+      var k=_sntKey(el), p=savedSnt[k];
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+    });
     sl.querySelectorAll('[data-ie="1"]').forEach(function(el){_bindDrag(el);});
     _injectGuides(sl);
     return;
   }
-  /* snapshot positions BEFORE switching layout */
+  /* snapshot ALL .s-cnt direct children BEFORE switching layout */
   var slR=sl.getBoundingClientRect();
-  var snap={};
-  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    var fk=el.dataset.fk;
-    if(!saved[fk]){
-      var r=el.getBoundingClientRect();
-      snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
-                t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
-                w:(r.width/slR.width*100).toFixed(2)+'%'};
+  var snap={}, snapSnt={};
+  var cnt=sl.querySelector('.s-cnt');
+  if(cnt)Array.from(cnt.children).forEach(function(el){
+    var r=el.getBoundingClientRect();
+    var pos={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
+             t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
+             w:(r.width/slR.width*100).toFixed(2)+'%'};
+    if(el.dataset&&el.dataset.ie==='1'){
+      var fk=el.dataset.fk; if(!saved[fk])snap[fk]=pos;
+    } else {
+      var k=_sntKey(el); if(!savedSnt[k])snapSnt[k]=pos;
     }
   });
   sl.classList.add('drag-mode');
+  /* apply positions to ALL children */
+  if(cnt){
+    Array.from(cnt.children).forEach(function(el){
+      if(el.dataset&&el.dataset.ie==='1')return;
+      var k=_sntKey(el), p=savedSnt[k]||snapSnt[k];
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+    });
+    if(_dgSid){
+      if(!S[_dgSid])S[_dgSid]={};
+      S[_dgSid]._sntPos=Object.assign({},savedSnt,snapSnt);
+    }
+  }
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
     var fk=el.dataset.fk, pos=saved[fk]||snap[fk];
     if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;if(pos.h)el.style.height=pos.h;if(pos.z)el.style.zIndex=pos.z;}
@@ -1641,6 +1665,7 @@ function _enterDrag(sl,idx){
   });
   _injectGuides(sl);
 }
+function _sntKey(el){return(el.dataset&&el.dataset.fk)||el.className||el.tagName;}
 
 /* ---- exit drag mode (Done) ---- */
 function _exitDrag(sl){
@@ -1660,12 +1685,21 @@ function _exitDrag(sl){
 function _applyDragPositions(sl,idx){
   var sid=(CFG[idx]||{}).id;
   var saved=sid&&S[sid]&&S[sid]._elPos;
-  if(!saved||!Object.keys(saved).length)return;
+  var savedSnt=sid&&S[sid]&&S[sid]._sntPos;
+  if((!saved||!Object.keys(saved).length)&&(!savedSnt||!Object.keys(savedSnt).length))return;
   sl.classList.add('drag-applied');
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    var p=saved[el.dataset.fk];
+    var p=saved&&saved[el.dataset.fk];
     if(p){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;if(p.h)el.style.height=p.h;if(p.z)el.style.zIndex=p.z;}
   });
+  if(savedSnt){
+    var cnt=sl.querySelector('.s-cnt');
+    if(cnt)Array.from(cnt.children).forEach(function(el){
+      if(el.dataset&&el.dataset.ie==='1')return;
+      var p=savedSnt[_sntKey(el)];
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+    });
+  }
 }
 
 /* ---- bind move drag to element ---- */
