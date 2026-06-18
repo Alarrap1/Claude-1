@@ -317,6 +317,13 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .ab-btn.on{background:rgba(200,121,74,.2);border-color:var(--gold);color:var(--gold)}
 .ab-sep{width:1px;background:var(--w12);margin:0 2px}
 
+/* drag done bar */
+#drag-bar{display:none;position:absolute;top:0;left:0;right:0;background:rgba(200,121,74,.18);border-bottom:2px solid rgba(200,121,74,.5);z-index:200;padding:8px 20px;align-items:center;justify-content:center;gap:14px;font-family:'Cairo',sans-serif}
+#drag-bar.on{display:flex}
+.drag-bar-lbl{font-size:12px;color:var(--gold);letter-spacing:.3px}
+.drag-bar-done{background:var(--gold);color:#fff;border:none;border-radius:6px;padding:5px 18px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background .12s}
+.drag-bar-done:hover{background:var(--gold2)}
+
 /* free drag mode */
 .slide.drag-mode .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
 .slide.drag-mode [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:grab;user-select:none;min-width:60px;padding:6px 8px;border-radius:5px;outline:1px dashed rgba(200,121,74,.4)}
@@ -387,8 +394,9 @@ body[data-anim="none"] .slide.ein{opacity:1}
     <div class="sb-foot">
       <button class="btn-start" onclick="startP()">&#9654; ابدأ العرض</button>
       <button class="btn-pdf" onclick="xpdf()">&#8595; PDF تصدير</button>
+      <button class="btn-io" style="width:100%;margin-bottom:2px" onclick="exportHTML()">&#8681; تحميل HTML (كامل)</button>
       <div class="sb-io">
-        <button class="btn-io" onclick="exportJSON()">&#8679; تصدير JSON</button>
+        <button class="btn-io" onclick="exportJSON()">&#8679; JSON</button>
         <label class="btn-io" style="cursor:pointer">&#8681; استيراد<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
       </div>
       <button class="btn-clr" onclick="clearData()">&#10005; مسح البيانات</button>
@@ -537,6 +545,12 @@ body[data-anim="none"] .slide.ein{opacity:1}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- drag mode bar -->
+  <div id="drag-bar">
+    <span class="drag-bar-lbl">✥ وضع التحريك — اسحب العناصر لأي مكان</span>
+    <button class="drag-bar-done" onclick="toggleDragMode()">✓ تم</button>
   </div>
 
   <!-- shortcuts help -->
@@ -731,6 +745,13 @@ function saveData(){
 
 function loadData(){
   try{
+    /* check for baked-in export data first */
+    const exp=window._ALARRAP_EXPORT;
+    if(exp){
+      if(exp.S)Object.keys(exp.S).forEach(function(k){S[k]=exp.S[k];});
+      if(exp.IM)Object.keys(exp.IM).forEach(function(k){IM[k]=exp.IM[k];});
+      return true;
+    }
     const raw=localStorage.getItem(LS_KEY);
     if(!raw)return false;
     const snap=JSON.parse(raw);
@@ -771,6 +792,23 @@ function exportJSON(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='alarrap_proposal_'+Date.now()+'.json';
+  a.click();
+}
+
+function exportHTML(){
+  /* build self-contained HTML with all current data baked in */
+  var snap={S:JSON.parse(JSON.stringify(S)),IM:{}};
+  Object.keys(IM).forEach(function(k){snap.IM[k]=IM[k];});
+  var dataScript='<script>window._ALARRAP_EXPORT='+JSON.stringify(snap)+';<\/script>';
+  var html=document.documentElement.outerHTML;
+  /* strip any previously baked export block */
+  html=html.replace(/<script>window\._ALARRAP_EXPORT[\s\S]*?<\/script>/,'');
+  /* inject fresh block right before Chart.js (the first external script) */
+  html=html.replace('<script src="https://cdnjs',dataScript+'\n<script src="https://cdnjs');
+  var blob=new Blob(['<!DOCTYPE html>\n'+html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='alarrap_proposal_'+Date.now()+'.html';
   a.click();
 }
 
@@ -1506,6 +1544,7 @@ function toggleDragMode(){
   _dragMode=!_dragMode;
   const btn=document.getElementById('btn-drag');
   if(btn)btn.classList.toggle('on',_dragMode);
+  document.getElementById('drag-bar').classList.toggle('on',_dragMode);
   const sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
   if(!sl)return;
   _dragMode?_enterDrag(sl,cur):_exitDrag(sl);
@@ -1760,6 +1799,7 @@ function exitP(){
     _dragMode=false;
     var btn=document.getElementById('btn-drag');
     if(btn)btn.classList.remove('on');
+    document.getElementById('drag-bar').classList.remove('on');
   }
   document.getElementById('pres').classList.remove('on');
   document.getElementById('pnav').classList.remove('hidden');
