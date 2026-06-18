@@ -317,6 +317,12 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .ab-btn.on{background:rgba(200,121,74,.2);border-color:var(--gold);color:var(--gold)}
 .ab-sep{width:1px;background:var(--w12);margin:0 2px}
 
+/* free drag mode */
+.slide.drag-mode .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
+.slide.drag-mode [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:grab;user-select:none;min-width:60px;padding:6px 8px;border-radius:5px;outline:1px dashed rgba(200,121,74,.4)}
+.slide.drag-mode [data-ie="1"]:hover{outline:1px solid rgba(200,121,74,.8);background:rgba(0,0,0,.08)}
+.slide.drag-mode [data-ie="1"].dragging{outline:2px solid var(--gold)!important;cursor:grabbing!important;z-index:50;background:rgba(0,0,0,.12)}
+
 /* sa animation (content stagger) */
 .sa{opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s}
 .ein .sa{opacity:1;transform:none}
@@ -559,6 +565,8 @@ body[data-anim="none"] .slide.ein{opacity:1}
     </div>
     <button class="pnav-btn pnav-icon" onclick="toggleStrip()" title="شرائح">&#9783;</button>
     <button class="pnav-btn pnav-icon" onclick="toggleAlignBar()" title="محاذاة">&#9618;</button>
+    <button class="pnav-btn pnav-icon" id="btn-drag" onclick="toggleDragMode()" title="تحريك حر - اسحب العناصر">&#10021;</button>
+    <button class="pnav-btn pnav-icon" onclick="resetDragPos()" title="إعادة مواضع السلايد">&#8635;</button>
     <button class="pnav-btn pnav-icon" onclick="toggleAnimPanel()" title="أنيميشن">&#9881;</button>
     <button class="pnav-btn pnav-icon" onclick="goFS()" title="شاشة كاملة">&#9974;</button>
     <button class="pnav-btn pnav-icon" onclick="document.getElementById('shortcut-help').classList.add('on')" title="مساعدة">?</button>
@@ -1150,16 +1158,16 @@ function lSlide(c, titleHtml, bodyHtml){
   const imgEl=img0?'<div class="img-frame img-tall"><img src="'+img0+'" alt=""></div>':'';
   const imgWideEl=img0?'<div class="img-frame img-wide"><img src="'+img0+'" alt=""></div>':'';
 
-  if(eff==='text') return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:flex-end">'+titleHtml+bodyHtml+'</div></div>';
+  if(eff==='text') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+bodyHtml+'</div></div>';
   if(eff==='rt') return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:stretch"><div class="split"><div class="split-txt">'+titleHtml+bodyHtml+'</div><div class="split-img">'+imgEl+'</div></div></div></div>';
   if(eff==='lr') return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:stretch"><div class="split rev"><div class="split-img">'+imgEl+'</div><div class="split-txt">'+titleHtml+bodyHtml+'</div></div></div></div>';
   if(eff==='top') return '<div class="slide">'+chr+'<div class="s-cnt"><div class="split-top"><div class="split-txt">'+titleHtml+bodyHtml+'</div>'+imgWideEl+'</div></div></div>';
   if(eff==='bot') return '<div class="slide">'+chr+'<div class="s-cnt"><div class="split-bot">'+imgWideEl+'<div class="split-txt">'+titleHtml+bodyHtml+'</div></div></div></div>';
   if(eff==='bg'){
     const bgStyle=img0?'background-image:url('+JSON.stringify(img0)+');background-size:cover;background-position:center':'';
-    return '<div class="slide" style="'+bgStyle+'"><div style="position:absolute;inset:0;background:rgba(6,15,20,.7);z-index:1"></div>'+chr+'<div class="s-cnt" style="z-index:2;align-items:center;text-align:center">'+titleHtml+bodyHtml+'</div></div>';
+    return '<div class="slide" style="'+bgStyle+'"><div style="position:absolute;inset:0;background:rgba(6,15,20,.7);z-index:1"></div>'+chr+'<div class="s-cnt" style="z-index:2">'+titleHtml+bodyHtml+'</div></div>';
   }
-  return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:flex-end">'+titleHtml+bodyHtml+'</div></div>';
+  return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+bodyHtml+'</div></div>';
 }
 
 function ttlHtml(c){
@@ -1183,7 +1191,7 @@ function bSlide(c){
     const stTitle=getSavedStyle(c.id,'title');
     const stSub=getSavedStyle(c.id,'sub');
     return '<div class="slide" style="'+bgStyle+'">'+ov+chr
-      +'<div class="s-cnt" style="z-index:2;align-items:flex-end">'
+      +'<div class="s-cnt" style="z-index:2">'
       +(s.eyebrow?'<div class="cv-eyebrow sa" data-ie="1" data-sid="'+c.id+'" data-fk="eyebrow" data-fl="Label">'+xE(s.eyebrow)+'</div>':'')
       +'<div class="sl-ttl sa" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان"'+(stTitle?' style="'+xE(stTitle)+'"':'')+'>'+xE(s.title||'Proposal')+'</div>'
       +'<div class="cv-bar sa"></div>'
@@ -1197,7 +1205,7 @@ function bSlide(c){
     const ov=img0?'<div style="position:absolute;inset:0;background:rgba(6,15,20,.78);z-index:1"></div>':'';
     const stTitle=getSavedStyle(c.id,'title');
     return '<div class="slide" style="'+bgStyle+'">'+ov+chr
-      +'<div class="s-cnt" style="z-index:2;align-items:flex-end">'
+      +'<div class="s-cnt" style="z-index:2">'
       +'<div class="dv-line sa"></div>'
       +'<div class="dv-ttl sa" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان"'+(stTitle?' style="'+xE(stTitle)+'"':'')+'>'+xE(s.title||'')+'</div>'
       +(s.sub?'<div class="sl-body sa" data-ie="1" data-sid="'+c.id+'" data-fk="sub" data-fl="فرعي">'+xE(s.sub)+'</div>':'')
@@ -1237,8 +1245,8 @@ function bSlide(c){
 
   if(c.type==='toc'){
     const items=(s.items||[]).filter(Boolean);
-    return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:center">'
-      +'<div class="sl-ttl sa" style="text-align:center" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان">'+xE(s.title||'')+'</div>'
+    return '<div class="slide">'+chr+'<div class="s-cnt">'
+      +'<div class="sl-ttl sa" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان">'+xE(s.title||'')+'</div>'
       +'<div class="toc-g sa">'+items.map(function(x,i){return '<div class="toc-cell"><div class="toc-n">'+String(i+1).padStart(2,'0')+'</div><div class="toc-nm">'+xE(x)+'</div></div>';}).join('')+'</div>'
       +'</div></div>';
   }
@@ -1256,18 +1264,18 @@ function bSlide(c){
       }).join('')+'</tbody>'
       +'<tfoot><tr class="tot-row"><td>الإجمالي</td><td>'+total.toLocaleString()+'</td><td>100%</td></tr></tfoot>'
       +'</table></div>';
-    return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:flex-end">'+ttl+tbl+'</div></div>';
+    return '<div class="slide">'+chr+'<div class="s-cnt">'+ttl+tbl+'</div></div>';
   }
 
   if(c.type==='chart'){
-    return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:flex-end">'
+    return '<div class="slide">'+chr+'<div class="s-cnt">'
       +'<div class="sl-ttl sa" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان">'+xE(s.title||'')+'</div>'
       +'<div class="sa" style="width:340px;height:300px;position:relative"><canvas id="ch-budget"></canvas></div>'
       +'</div></div>';
   }
 
   if(c.type==='chart2'){
-    return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:flex-end">'
+    return '<div class="slide">'+chr+'<div class="s-cnt">'
       +'<div class="sl-ttl sa" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان">'+xE(s.title||'')+'</div>'
       +'<div class="sa" style="width:660px;height:300px;max-width:100%;position:relative"><canvas id="ch-results"></canvas></div>'
       +'</div></div>';
@@ -1280,14 +1288,14 @@ function bSlide(c){
     const grid='<div class="media-g '+cls+' sa">'+imgs.map(function(src){
       return '<div class="img-frame"><img src="'+src+'" alt=""></div>';
     }).join('')+'</div>';
-    return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:center">'+ttl+grid+'</div></div>';
+    return '<div class="slide">'+chr+'<div class="s-cnt">'+ttl+grid+'</div></div>';
   }
 
   if(c.type==='closing'){
     const aLogo=IM['cover__logo_a']||'';
     const bgStyle=img0?'background-image:url('+JSON.stringify(img0)+');background-size:cover;background-position:center':'';
     const ov=img0?'<div style="position:absolute;inset:0;background:rgba(6,15,20,.8);z-index:1"></div>':'';
-    return '<div class="slide" style="'+bgStyle+'">'+ov+chr+'<div class="s-cnt" style="align-items:center;justify-content:center;z-index:2">'
+    return '<div class="slide" style="'+bgStyle+'">'+ov+chr+'<div class="s-cnt" style="z-index:2">'
       +'<div class="clo-wrap">'
       +(aLogo?'<img class="clo-logo sa" src="'+aLogo+'" alt="">':'<span class="clo-logo sa" style="font-size:28px;font-weight:900;color:#fff">العراب</span>')
       +'<div class="clo-bar sa"></div>'
@@ -1461,7 +1469,7 @@ function applyAlignToCnt(idx){
   const cnt=sl&&sl.querySelector('.s-cnt'); if(!cnt)return;
   const cfg=CFG[idx]; if(!cfg)return;
   const s=S[cfg.id]||{};
-  const a=s._align||'r', va=s._valign||'c';
+  const a=s._align||'c', va=s._valign||'c';
   cnt.classList.remove('al-r','al-c','al-l','vl-t','vl-c','vl-b');
   cnt.classList.add('al-'+a,'vl-'+va);
   /* also apply saved pos overrides */
@@ -1472,7 +1480,7 @@ function applyAlignToCnt(idx){
 function syncAlignBar(){
   const cfg=CFG[cur]; if(!cfg)return;
   const s=S[cfg.id]||{};
-  const a=s._align||'r', va=s._valign||'c';
+  const a=s._align||'c', va=s._valign||'c';
   ['r','c','l'].forEach(function(x){const b=document.getElementById('ab-'+x);if(b)b.classList.toggle('on',x===a);});
   ['vt','vc','vb'].forEach(function(x){const b=document.getElementById('ab-'+x);if(b)b.classList.toggle('on',x===a.replace('v',''));});
   /* fix valign buttons */
@@ -1487,6 +1495,106 @@ function toggleAlignBar(){
 function updProgress(idx,tot){
   const bar=document.getElementById('pres-prog');
   if(bar)bar.style.width=(tot>1?Math.round(idx/(tot-1)*100):100)+'%';
+}
+
+/* ================================================================
+   FREE DRAG POSITIONING
+   ================================================================ */
+let _dragMode=false;
+
+function toggleDragMode(){
+  _dragMode=!_dragMode;
+  const btn=document.getElementById('btn-drag');
+  if(btn)btn.classList.toggle('on',_dragMode);
+  const sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+  if(!sl)return;
+  _dragMode?_enterDrag(sl,cur):_exitDrag(sl);
+}
+
+function _enterDrag(sl,idx){
+  if(!sl)return;
+  sl.classList.add('drag-mode');
+  const slR=sl.getBoundingClientRect();
+  const sid=(CFG[idx]||{}).id;
+  const saved=sid&&S[sid]&&S[sid]._elPos||{};
+  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+    const fk=el.dataset.fk;
+    if(saved[fk]){
+      el.style.left=saved[fk].l;
+      el.style.top=saved[fk].t;
+      if(saved[fk].w)el.style.width=saved[fk].w;
+    } else {
+      const r=el.getBoundingClientRect();
+      el.style.left=((r.left-slR.left)/slR.width*100).toFixed(1)+'%';
+      el.style.top=((r.top-slR.top)/slR.height*100).toFixed(1)+'%';
+      el.style.width=(r.width/slR.width*100).toFixed(1)+'%';
+    }
+    _bindDrag(el,sl,sid);
+  });
+}
+
+function _exitDrag(sl){
+  if(!sl)return;
+  sl.classList.remove('drag-mode');
+  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+    if(el._dOff)el._dOff();
+    el.style.left='';el.style.top='';el.style.width='';
+  });
+}
+
+function _bindDrag(el,sl,sid){
+  if(el._dOff)el._dOff();
+  var ox,oy,px,py,moved=false;
+  function md(ev){
+    if(ev.button!==0)return;
+    ev.preventDefault();ev.stopPropagation();
+    moved=false;
+    ox=ev.clientX;oy=ev.clientY;
+    px=parseFloat(el.style.left)||0;
+    py=parseFloat(el.style.top)||0;
+    el.classList.add('dragging');
+    window.addEventListener('mousemove',mm,true);
+    window.addEventListener('mouseup',mu,true);
+  }
+  function mm(ev){
+    var r=sl.getBoundingClientRect();
+    var dx=(ev.clientX-ox)/r.width*100;
+    var dy=(ev.clientY-oy)/r.height*100;
+    if(Math.abs(ev.clientX-ox)+Math.abs(ev.clientY-oy)>4)moved=true;
+    el.style.left=(px+dx).toFixed(1)+'%';
+    el.style.top=(py+dy).toFixed(1)+'%';
+  }
+  function mu(){
+    el.classList.remove('dragging');
+    window.removeEventListener('mousemove',mm,true);
+    window.removeEventListener('mouseup',mu,true);
+    if(moved&&sid){
+      if(!S[sid])S[sid]={};
+      if(!S[sid]._elPos)S[sid]._elPos={};
+      S[sid]._elPos[el.dataset.fk]={l:el.style.left,t:el.style.top,w:el.style.width};
+      scheduleSave();
+    }
+  }
+  el.addEventListener('mousedown',md);
+  el._getMoved=function(){return moved;};
+  el._dOff=function(){
+    el.removeEventListener('mousedown',md);
+    window.removeEventListener('mousemove',mm,true);
+    window.removeEventListener('mouseup',mu,true);
+  };
+}
+
+function resetDragPos(){
+  var cfg=CFG[cur]; if(!cfg)return;
+  if(S[cfg.id])delete S[cfg.id]._elPos;
+  scheduleSave();
+  if(_dragMode){
+    reRenderCur();
+    setTimeout(function(){
+      var sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+      if(sl)_enterDrag(sl,cur);
+    },120);
+  }
 }
 
 /* ================================================================
@@ -1515,8 +1623,11 @@ function startP(){
 function attachIE(){
   document.querySelectorAll('#sw [data-ie="1"]').forEach(function(el){
     el.style.cursor='pointer';
-    el.title='اضغط للتعديل';
-    el.addEventListener('click',function(ev){ieOpen(el,ev);});
+    el.title='اضغط للتعديل · اسحب للتحريك (فعّل وضع التحريك)';
+    el.addEventListener('click',function(ev){
+      if(el._getMoved&&el._getMoved())return;
+      ieOpen(el,ev);
+    });
   });
 }
 
@@ -1529,11 +1640,18 @@ function reRenderCur(){
   ns.classList.add('ein'); /* no inline opacity — let CSS handle it */
   sw.replaceChild(ns,sw.children[cur]);
   ns.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    el.style.cursor='pointer'; el.title='اضغط للتعديل';
-    el.addEventListener('click',function(ev){ieOpen(el,ev);});
+    el.style.cursor='pointer';
+    el.title='اضغط للتعديل · اسحب للتحريك (فعّل وضع التحريك)';
+    el.addEventListener('click',function(ev){if(el._getMoved&&el._getMoved())return;ieOpen(el,ev);});
   });
   setTimeout(initCharts,100);
   updateStripActive();
+  if(_dragMode){
+    setTimeout(function(){
+      var nsl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+      if(nsl)_enterDrag(nsl,cur);
+    },80);
+  }
 }
 
 function show(idx,init){
@@ -1566,6 +1684,13 @@ function show(idx,init){
   updProgress(idx,tot);
   /* apply saved alignment after transition so DOM exists */
   setTimeout(function(){applyAlignToCnt(idx);syncAlignBar();},50);
+  /* re-enter drag mode on new slide if active */
+  if(_dragMode){
+    setTimeout(function(){
+      var nsl=Array.from(document.querySelectorAll('#sw .slide'))[idx];
+      if(nsl)_enterDrag(nsl,idx);
+    },init?60:520);
+  }
 }
 
 let _navHideTimer=null;
@@ -1626,6 +1751,11 @@ function scaleSlide(dir){
 
 function exitP(){
   clearTimeout(_navHideTimer);
+  if(_dragMode){
+    _dragMode=false;
+    var btn=document.getElementById('btn-drag');
+    if(btn)btn.classList.remove('on');
+  }
   document.getElementById('pres').classList.remove('on');
   document.getElementById('pnav').classList.remove('hidden');
   document.getElementById('sw').style.fontSize='';
