@@ -318,18 +318,47 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .ab-sep{width:1px;background:var(--w12);margin:0 2px}
 
 /* drag done bar */
-#drag-bar{display:none;position:absolute;top:0;left:0;right:0;background:rgba(200,121,74,.18);border-bottom:2px solid rgba(200,121,74,.5);z-index:200;padding:8px 20px;align-items:center;justify-content:center;gap:14px;font-family:'Cairo',sans-serif}
+#drag-bar{display:none;position:absolute;top:0;left:0;right:0;background:rgba(200,121,74,.18);border-bottom:2px solid rgba(200,121,74,.5);z-index:200;padding:6px 20px;align-items:center;justify-content:center;gap:14px;font-family:'Cairo',sans-serif}
 #drag-bar.on{display:flex}
-.drag-bar-lbl{font-size:12px;color:var(--gold);letter-spacing:.3px}
-.drag-bar-done{background:var(--gold);color:#fff;border:none;border-radius:6px;padding:5px 18px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background .12s}
+.drag-bar-lbl{font-size:11px;color:var(--gold)}
+.drag-bar-done{background:var(--gold);color:#fff;border:none;border-radius:6px;padding:4px 16px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer}
 .drag-bar-done:hover{background:var(--gold2)}
 
-/* free drag mode */
+/* free drag mode - NO transitions on elements to avoid lag */
 .slide.drag-mode .s-cnt,.slide.drag-applied .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
-.slide.drag-mode [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:grab;user-select:none;min-width:60px;padding:6px 8px;border-radius:5px;outline:1px dashed rgba(200,121,74,.4)}
-.slide.drag-mode [data-ie="1"]:hover{outline:1px solid rgba(200,121,74,.8);background:rgba(0,0,0,.08)}
-.slide.drag-mode [data-ie="1"].dragging{outline:2px solid var(--gold)!important;cursor:grabbing!important;z-index:50;background:rgba(0,0,0,.12)}
-.slide.drag-applied [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:pointer}
+.slide.drag-mode [data-ie="1"],.slide.drag-applied [data-ie="1"]{position:absolute!important;pointer-events:all!important;transition:none!important;user-select:none}
+.slide.drag-mode [data-ie="1"]{cursor:grab;outline:1px dashed rgba(200,121,74,.5);border-radius:4px}
+.slide.drag-mode [data-ie="1"].dg-sel{outline:2px solid var(--gold)!important;cursor:grab;z-index:40}
+.slide.drag-mode [data-ie="1"].dg-dragging{cursor:grabbing!important;z-index:50;outline:2px solid var(--gold2)!important}
+.slide.drag-applied [data-ie="1"]{cursor:pointer}
+/* also kill sa transitions in drag */
+.slide.drag-mode .sa,.slide.drag-applied .sa{transition:none!important;opacity:1!important;transform:none!important}
+
+/* resize handles */
+.dg-handle{position:absolute;width:9px;height:9px;background:var(--gold);border:1.5px solid #fff;border-radius:2px;z-index:60;pointer-events:all}
+.dg-handle.h-nw{top:-5px;left:-5px;cursor:nw-resize}
+.dg-handle.h-ne{top:-5px;right:-5px;cursor:ne-resize}
+.dg-handle.h-sw{bottom:-5px;left:-5px;cursor:sw-resize}
+.dg-handle.h-se{bottom:-5px;right:-5px;cursor:se-resize}
+.dg-handle.h-n{top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.dg-handle.h-s{bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.dg-handle.h-w{top:50%;left:-5px;transform:translateY(-50%);cursor:w-resize}
+.dg-handle.h-e{top:50%;right:-5px;transform:translateY(-50%);cursor:e-resize}
+
+/* element mini toolbar */
+#dg-tb{display:none;position:absolute;z-index:300;background:rgba(6,15,20,.95);border:1px solid var(--w12);border-radius:8px;padding:4px 7px;gap:4px;align-items:center;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+#dg-tb.on{display:flex}
+.dt-btn{background:rgba(255,255,255,.07);border:1px solid var(--w12);color:var(--w55);border-radius:4px;width:22px;height:22px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:monospace;padding:0;flex-shrink:0;transition:background .1s}
+.dt-btn:hover{background:rgba(255,255,255,.15);color:var(--w)}
+.dt-sep{width:1px;height:14px;background:var(--w12);flex-shrink:0}
+.dt-val{font-size:10px;color:var(--gold);min-width:26px;text-align:center;font-family:monospace;font-weight:700}
+.dt-lbl{font-size:9px;color:var(--w30);text-transform:uppercase;letter-spacing:.5px}
+
+/* snap guides */
+#sg-h,#sg-v{position:absolute;pointer-events:none;z-index:90;opacity:0;transition:opacity .08s}
+#sg-h{left:0;right:0;height:1px;background:rgba(200,121,74,.8);top:50%}
+#sg-v{top:0;bottom:0;width:1px;background:rgba(200,121,74,.8);left:50%}
+#sg-h.on,#sg-v.on{opacity:1}
 
 /* sa animation (content stagger) */
 .sa{opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s}
@@ -550,8 +579,31 @@ body[data-anim="none"] .slide.ein{opacity:1}
 
   <!-- drag mode bar -->
   <div id="drag-bar">
-    <span class="drag-bar-lbl">✥ وضع التحريك — اسحب العناصر لأي مكان</span>
+    <span class="drag-bar-lbl">✥ وضع التحريك — اسحب العناصر · ↑↓←→ للتدقيق</span>
     <button class="drag-bar-done" onclick="toggleDragMode()">✓ تم</button>
+  </div>
+
+  <!-- snap guides (injected into slide by JS) -->
+
+  <!-- element mini toolbar -->
+  <div id="dg-tb">
+    <span class="dt-lbl">حجم</span>
+    <button class="dt-btn" id="dt-fs-m" onclick="dtFS(-1)" title="تصغير الخط">−</button>
+    <span class="dt-val" id="dt-fs-v">16</span>
+    <button class="dt-btn" id="dt-fs-p" onclick="dtFS(1)" title="تكبير الخط">+</button>
+    <div class="dt-sep"></div>
+    <span class="dt-lbl">شفافية</span>
+    <button class="dt-btn" onclick="dtOp(-10)" title="أقل شفافية">◑</button>
+    <span class="dt-val" id="dt-op-v">100%</span>
+    <button class="dt-btn" onclick="dtOp(10)" title="أكثر شفافية">○</button>
+    <div class="dt-sep"></div>
+    <button class="dt-btn" onclick="dtBold()" id="dt-bold" title="Bold">B</button>
+    <button class="dt-btn" onclick="dtCenter()" title="توسيط">≡</button>
+    <div class="dt-sep"></div>
+    <button class="dt-btn" onclick="dtFront()" title="للأمام">▲</button>
+    <button class="dt-btn" onclick="dtBack()" title="للخلف">▼</button>
+    <div class="dt-sep"></div>
+    <button class="dt-btn" onclick="dtResetEl()" title="إعادة موضع هذا العنصر" style="color:rgba(255,120,120,.8)">✕</button>
   </div>
 
   <!-- shortcuts help -->
@@ -1537,125 +1589,344 @@ function updProgress(idx,tot){
 }
 
 /* ================================================================
-   FREE DRAG POSITIONING
+   FREE DRAG POSITIONING v2 — selection + resize + toolbar + snap
    ================================================================ */
-let _dragMode=false;
+var _dragMode=false;
+var _dgSel=null;   /* selected element */
+var _dgSl=null;    /* current drag slide */
+var _dgSid=null;
+var _dgRaf=null;
+var _dgPend=null;
 
+/* ---- toggle ---- */
 function toggleDragMode(){
   _dragMode=!_dragMode;
-  const btn=document.getElementById('btn-drag');
+  var btn=document.getElementById('btn-drag');
   if(btn)btn.classList.toggle('on',_dragMode);
   document.getElementById('drag-bar').classList.toggle('on',_dragMode);
-  const sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+  var sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
   if(!sl)return;
   _dragMode?_enterDrag(sl,cur):_exitDrag(sl);
 }
 
+/* ---- enter drag mode ---- */
 function _enterDrag(sl,idx){
   if(!sl)return;
-  var sid=(CFG[idx]||{}).id;
-  var saved=sid&&S[sid]&&S[sid]._elPos||{};
-  /* if already in drag-applied state, just re-activate drag handles */
+  _dgSl=sl; _dgSid=(CFG[idx]||{}).id;
+  var saved=_dgSid&&S[_dgSid]&&S[_dgSid]._elPos||{};
   if(sl.classList.contains('drag-applied')){
     sl.classList.remove('drag-applied');
     sl.classList.add('drag-mode');
-    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-      _bindDrag(el,sl,sid);
-    });
+    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){_bindDrag(el);});
+    _injectGuides(sl);
     return;
   }
-  /* snapshot positions BEFORE switching to absolute layout */
+  /* snapshot positions BEFORE switching layout */
   var slR=sl.getBoundingClientRect();
   var snap={};
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
     var fk=el.dataset.fk;
     if(!saved[fk]){
       var r=el.getBoundingClientRect();
-      snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(1)+'%',
-                t:((r.top-slR.top)/slR.height*100).toFixed(1)+'%',
-                w:(r.width/slR.width*100).toFixed(1)+'%'};
+      snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
+                t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
+                w:(r.width/slR.width*100).toFixed(2)+'%'};
     }
   });
   sl.classList.add('drag-mode');
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    var fk=el.dataset.fk;
-    var pos=saved[fk]||snap[fk];
-    if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;}
-    _bindDrag(el,sl,sid);
+    var fk=el.dataset.fk, pos=saved[fk]||snap[fk];
+    if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;if(pos.h)el.style.height=pos.h;if(pos.z)el.style.zIndex=pos.z;}
+    _bindDrag(el);
   });
+  _injectGuides(sl);
 }
 
+/* ---- exit drag mode (Done) ---- */
 function _exitDrag(sl){
   if(!sl)return;
+  _deselect();
   sl.classList.remove('drag-mode');
-  sl.classList.add('drag-applied'); /* keep absolute positions, remove handles */
+  sl.classList.add('drag-applied');
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    if(el._dOff)el._dOff();
+    if(el._dOff){el._dOff();el._dOff=null;}
     el.style.cursor='pointer';
   });
+  _removeGuides(sl);
+  _dgSl=null;
 }
 
+/* ---- apply saved positions (no handles, drag-applied state) ---- */
 function _applyDragPositions(sl,idx){
-  /* apply saved positions in drag-applied mode (no drag handles) */
   var sid=(CFG[idx]||{}).id;
   var saved=sid&&S[sid]&&S[sid]._elPos;
   if(!saved||!Object.keys(saved).length)return;
   sl.classList.add('drag-applied');
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
     var p=saved[el.dataset.fk];
-    if(p){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;}
+    if(p){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;if(p.h)el.style.height=p.h;if(p.z)el.style.zIndex=p.z;}
   });
 }
 
-function _bindDrag(el,sl,sid){
-  if(el._dOff)el._dOff();
-  var ox,oy,px,py,moved=false;
+/* ---- bind move drag to element ---- */
+function _bindDrag(el){
+  if(el._dOff){el._dOff();el._dOff=null;}
+  var moved=false,ox,oy,px,py,raf=null,pendX,pendY;
   function md(ev){
-    if(ev.button!==0)return;
+    if(ev.button!==0||ev.target.classList.contains('dg-handle'))return;
     ev.preventDefault();ev.stopPropagation();
     moved=false;
+    _select(el);
     ox=ev.clientX;oy=ev.clientY;
     px=parseFloat(el.style.left)||0;
     py=parseFloat(el.style.top)||0;
-    el.classList.add('dragging');
+    el.classList.add('dg-dragging');
     window.addEventListener('mousemove',mm,true);
     window.addEventListener('mouseup',mu,true);
   }
   function mm(ev){
-    var r=sl.getBoundingClientRect();
-    var dx=(ev.clientX-ox)/r.width*100;
-    var dy=(ev.clientY-oy)/r.height*100;
-    if(Math.abs(ev.clientX-ox)+Math.abs(ev.clientY-oy)>4)moved=true;
-    el.style.left=(px+dx).toFixed(1)+'%';
-    el.style.top=(py+dy).toFixed(1)+'%';
+    if(Math.abs(ev.clientX-ox)+Math.abs(ev.clientY-oy)>3)moved=true;
+    pendX=ev.clientX;pendY=ev.clientY;
+    if(!raf)raf=requestAnimationFrame(doMove);
+  }
+  function doMove(){
+    raf=null;
+    var r=_dgSl.getBoundingClientRect();
+    var dx=(pendX-ox)/r.width*100, dy=(pendY-oy)/r.height*100;
+    var nl=(px+dx).toFixed(2)+'%', nt=(py+dy).toFixed(2)+'%';
+    el.style.left=nl;el.style.top=nt;
+    _checkSnap(el,r);
+    _posToolbar(el);
   }
   function mu(){
-    el.classList.remove('dragging');
+    if(raf){cancelAnimationFrame(raf);raf=null;}
+    el.classList.remove('dg-dragging');
     window.removeEventListener('mousemove',mm,true);
     window.removeEventListener('mouseup',mu,true);
-    if(moved&&sid){
-      if(!S[sid])S[sid]={};
-      if(!S[sid]._elPos)S[sid]._elPos={};
-      S[sid]._elPos[el.dataset.fk]={l:el.style.left,t:el.style.top,w:el.style.width};
-      scheduleSave();
-    }
+    _snapOff();
+    if(moved)_saveElPos(el);
   }
   el.addEventListener('mousedown',md);
   el._getMoved=function(){return moved;};
   el._dOff=function(){
     el.removeEventListener('mousedown',md);
+    if(raf){cancelAnimationFrame(raf);raf=null;}
     window.removeEventListener('mousemove',mm,true);
     window.removeEventListener('mouseup',mu,true);
   };
 }
 
+/* ---- bind resize to a handle ---- */
+function _bindResize(handle,el,dir){
+  var ox,oy,pw,ph,pl,pt,raf=null,pendX,pendY;
+  function md(ev){
+    if(ev.button!==0)return;
+    ev.preventDefault();ev.stopPropagation();
+    ox=ev.clientX;oy=ev.clientY;
+    pw=el.offsetWidth;ph=el.offsetHeight;
+    pl=parseFloat(el.style.left)||0;
+    pt=parseFloat(el.style.top)||0;
+    window.addEventListener('mousemove',mm,true);
+    window.addEventListener('mouseup',mu,true);
+  }
+  function mm(ev){pendX=ev.clientX;pendY=ev.clientY;if(!raf)raf=requestAnimationFrame(doR);}
+  function doR(){
+    raf=null;
+    var r=_dgSl.getBoundingClientRect();
+    var dx=(pendX-ox)/r.width*100, dy=(pendY-oy)/r.height*100;
+    var cw=pw/r.width*100, ch=ph/r.height*100;
+    /* apply delta based on handle direction */
+    if(dir.indexOf('e')>-1){el.style.width=Math.max(5,cw+dx).toFixed(2)+'%';}
+    if(dir.indexOf('w')>-1){var nw=Math.max(5,cw-dx);el.style.left=(pl+dx).toFixed(2)+'%';el.style.width=nw.toFixed(2)+'%';}
+    if(dir.indexOf('s')>-1){el.style.height=Math.max(2,ch+dy).toFixed(2)+'%';}
+    if(dir.indexOf('n')>-1){var nh=Math.max(2,ch-dy);el.style.top=(pt+dy).toFixed(2)+'%';el.style.height=nh.toFixed(2)+'%';}
+    _posToolbar(el);
+  }
+  function mu(){
+    if(raf){cancelAnimationFrame(raf);raf=null;}
+    window.removeEventListener('mousemove',mm,true);
+    window.removeEventListener('mouseup',mu,true);
+    _saveElPos(el);
+  }
+  handle.addEventListener('mousedown',md);
+}
+
+/* ---- selection ---- */
+function _select(el){
+  if(_dgSel===el)return;
+  _deselect();
+  _dgSel=el;
+  el.classList.add('dg-sel');
+  _addHandles(el);
+  _showToolbar(el);
+}
+function _deselect(){
+  if(!_dgSel)return;
+  _dgSel.classList.remove('dg-sel');
+  _removeHandles();
+  _hideToolbar();
+  _dgSel=null;
+}
+
+/* ---- handles ---- */
+var _dgHandles=[];
+function _addHandles(el){
+  _removeHandles();
+  ['nw','n','ne','e','se','s','sw','w'].forEach(function(d){
+    var h=document.createElement('div');
+    h.className='dg-handle h-'+d;
+    h.addEventListener('mousedown',function(ev){ev.stopPropagation();});
+    _bindResize(h,el,d);
+    el.appendChild(h);
+    _dgHandles.push(h);
+  });
+}
+function _removeHandles(){
+  _dgHandles.forEach(function(h){h.parentNode&&h.parentNode.removeChild(h);});
+  _dgHandles=[];
+}
+
+/* ---- mini toolbar ---- */
+function _showToolbar(el){
+  var tb=document.getElementById('dg-tb');
+  if(!tb)return;
+  tb.classList.add('on');
+  _posToolbar(el);
+  _updateTBValues(el);
+}
+function _posToolbar(el){
+  if(!_dgSl)return;
+  var tb=document.getElementById('dg-tb'); if(!tb||!tb.classList.contains('on'))return;
+  var slR=_dgSl.getBoundingClientRect();
+  var elR=el.getBoundingClientRect();
+  var top=elR.top-slR.top-tb.offsetHeight-8;
+  var left=elR.left-slR.left+(elR.width/2)-(tb.offsetWidth/2);
+  if(top<4)top=elR.bottom-slR.top+8;
+  left=Math.max(4,Math.min(slR.width-tb.offsetWidth-4,left));
+  tb.style.top=top+'px';tb.style.left=left+'px';
+}
+function _hideToolbar(){document.getElementById('dg-tb').classList.remove('on');}
+function _updateTBValues(el){
+  var fs=Math.round(parseFloat(window.getComputedStyle(el).fontSize)||16);
+  document.getElementById('dt-fs-v').textContent=fs;
+  var op=Math.round((parseFloat(el.style.opacity)||1)*100);
+  document.getElementById('dt-op-v').textContent=op+'%';
+  var fw=window.getComputedStyle(el).fontWeight;
+  document.getElementById('dt-bold').classList.toggle('on',parseInt(fw)>=700);
+}
+
+/* toolbar actions */
+function dtFS(d){
+  if(!_dgSel)return;
+  var fs=Math.round(parseFloat(window.getComputedStyle(_dgSel).fontSize)||16)+d*2;
+  fs=Math.max(8,Math.min(96,fs));
+  _dgSel.style.fontSize=fs+'px';
+  document.getElementById('dt-fs-v').textContent=fs;
+  _saveElStyle();
+}
+function dtOp(d){
+  if(!_dgSel)return;
+  var op=Math.max(10,Math.min(100,Math.round((parseFloat(_dgSel.style.opacity)||1)*100)+d));
+  _dgSel.style.opacity=(op/100).toFixed(2);
+  document.getElementById('dt-op-v').textContent=op+'%';
+  _saveElStyle();
+}
+function dtBold(){
+  if(!_dgSel)return;
+  var cur=parseInt(window.getComputedStyle(_dgSel).fontWeight)||400;
+  _dgSel.style.fontWeight=cur>=700?'400':'700';
+  document.getElementById('dt-bold').classList.toggle('on',cur<700);
+  _saveElStyle();
+}
+function dtCenter(){
+  if(!_dgSel)return;
+  _dgSel.style.textAlign=_dgSel.style.textAlign==='center'?'right':'center';
+  _saveElStyle();
+}
+function dtFront(){
+  if(!_dgSel)return;
+  var z=parseInt(_dgSel.style.zIndex)||40;
+  _dgSel.style.zIndex=z+5;
+  _saveElPos(_dgSel);
+}
+function dtBack(){
+  if(!_dgSel)return;
+  var z=parseInt(_dgSel.style.zIndex)||40;
+  _dgSel.style.zIndex=Math.max(1,z-5);
+  _saveElPos(_dgSel);
+}
+function dtResetEl(){
+  if(!_dgSel||!_dgSid)return;
+  var fk=_dgSel.dataset.fk;
+  if(S[_dgSid]&&S[_dgSid]._elPos)delete S[_dgSid]._elPos[fk];
+  if(S[_dgSid]&&S[_dgSid]._elStyles)delete S[_dgSid]._elStyles[fk];
+  scheduleSave();
+  _deselect();
+  /* re-enter drag to reposition from flex */
+  if(_dgSl){
+    _exitDrag(_dgSl);
+    setTimeout(function(){if(_dgSl)_enterDrag(_dgSl,cur);},20);
+  }
+}
+
+/* ---- save helpers ---- */
+function _saveElPos(el){
+  if(!_dgSid||!el)return;
+  if(!S[_dgSid])S[_dgSid]={};
+  if(!S[_dgSid]._elPos)S[_dgSid]._elPos={};
+  var p={l:el.style.left,t:el.style.top,w:el.style.width};
+  if(el.style.height)p.h=el.style.height;
+  if(el.style.zIndex)p.z=el.style.zIndex;
+  S[_dgSid]._elPos[el.dataset.fk]=p;
+  scheduleSave();
+}
+function _saveElStyle(){
+  if(!_dgSel||!_dgSid)return;
+  if(!S[_dgSid])S[_dgSid]={};
+  if(!S[_dgSid]._elStyles)S[_dgSid]._elStyles={};
+  S[_dgSid]._elStyles[_dgSel.dataset.fk]=_dgSel.getAttribute('style')||'';
+  scheduleSave();
+}
+
+/* ---- snap guides ---- */
+var _sgH=null,_sgV=null;
+function _injectGuides(sl){
+  _removeGuides(sl);
+  _sgH=document.createElement('div');_sgH.id='sg-h';sl.appendChild(_sgH);
+  _sgV=document.createElement('div');_sgV.id='sg-v';sl.appendChild(_sgV);
+}
+function _removeGuides(sl){
+  var h=sl&&sl.querySelector('#sg-h'),v=sl&&sl.querySelector('#sg-v');
+  if(h)h.remove();if(v)v.remove();
+  _sgH=null;_sgV=null;
+}
+var _SNAP=4; /* snap zone in % */
+function _checkSnap(el,slR){
+  var l=parseFloat(el.style.left),t=parseFloat(el.style.top);
+  var w=el.offsetWidth/slR.width*100,h=el.offsetHeight/slR.height*100;
+  var cx=l+w/2, cy=t+h/2;
+  var snapV=Math.abs(cx-50)<_SNAP, snapH=Math.abs(cy-50)<_SNAP;
+  if(snapV){el.style.left=(50-w/2).toFixed(2)+'%';}
+  if(snapH){el.style.top=(50-h/2).toFixed(2)+'%';}
+  if(_sgV)_sgV.classList.toggle('on',snapV);
+  if(_sgH)_sgH.classList.toggle('on',snapH);
+}
+function _snapOff(){
+  if(_sgV)_sgV.classList.remove('on');
+  if(_sgH)_sgH.classList.remove('on');
+}
+
+/* ---- reset all positions on current slide ---- */
 function resetDragPos(){
   var sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+  _deselect();
   if(sl){
+    _removeGuides(sl);
     sl.classList.remove('drag-mode','drag-applied');
     sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-      if(el._dOff)el._dOff();
+      if(el._dOff){el._dOff();el._dOff=null;}
       el.style.left='';el.style.top='';el.style.width='';
+      el.style.height='';el.style.zIndex='';
     });
   }
   var cfg=CFG[cur]; if(!cfg)return;
@@ -1783,6 +2054,21 @@ function closeAllPanels(){
 function keyN(ev){
   if(ev.target.tagName==='INPUT'||ev.target.tagName==='TEXTAREA')return;
   const tot=document.querySelectorAll('#sw .slide').length;
+  /* arrow keys nudge selected drag element (0.5% per press) */
+  if(_dragMode&&_dgSel&&(ev.key==='ArrowLeft'||ev.key==='ArrowRight'||ev.key==='ArrowUp'||ev.key==='ArrowDown')){
+    ev.preventDefault();
+    var step=ev.shiftKey?2:0.5;
+    var l=parseFloat(_dgSel.style.left)||0, t=parseFloat(_dgSel.style.top)||0;
+    if(ev.key==='ArrowLeft')l-=step;
+    if(ev.key==='ArrowRight')l+=step;
+    if(ev.key==='ArrowUp')t-=step;
+    if(ev.key==='ArrowDown')t+=step;
+    _dgSel.style.left=l.toFixed(2)+'%';
+    _dgSel.style.top=t.toFixed(2)+'%';
+    _saveElPos(_dgSel);
+    _posToolbar(_dgSel);
+    return;
+  }
   if(ev.key==='ArrowLeft'||ev.key==='ArrowDown'){ev.preventDefault();go(1);}
   else if(ev.key==='ArrowRight'||ev.key==='ArrowUp'){ev.preventDefault();go(-1);}
   else if(ev.key==='Home'){ev.preventDefault();show(0);}
@@ -1790,9 +2076,11 @@ function keyN(ev){
   else if(ev.key==='f'||ev.key==='F'){goFS();}
   else if(ev.key==='?'){document.getElementById('shortcut-help').classList.toggle('on');}
   else if(ev.key==='Escape'){
+    if(_dragMode&&_dgSel){_deselect();return;}
     if(document.getElementById('shortcut-help').classList.contains('on')){document.getElementById('shortcut-help').classList.remove('on');}
     else if(document.getElementById('ie-wrap').classList.contains('on')){ieClose();}
     else if(document.getElementById('anim-panel').classList.contains('on')||document.getElementById('align-bar').classList.contains('on')){closeAllPanels();}
+    else if(_dragMode){toggleDragMode();}
     else{exitP();}
   }
   showNav();
@@ -1809,7 +2097,13 @@ function showNav(){
 function initNavAutoHide(){
   const sw=document.getElementById('sw');
   sw.addEventListener('mousemove',showNav);
-  sw.addEventListener('click',showNav);
+  sw.addEventListener('click',function(ev){
+    showNav();
+    /* click on slide background deselects element in drag mode */
+    if(_dragMode&&!ev.target.closest('[data-ie="1"]')&&!ev.target.closest('#dg-tb')&&!ev.target.classList.contains('dg-handle')){
+      _deselect();
+    }
+  });
   showNav();
 }
 
