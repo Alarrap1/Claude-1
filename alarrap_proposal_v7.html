@@ -325,10 +325,11 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .drag-bar-done:hover{background:var(--gold2)}
 
 /* free drag mode */
-.slide.drag-mode .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
+.slide.drag-mode .s-cnt,.slide.drag-applied .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
 .slide.drag-mode [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:grab;user-select:none;min-width:60px;padding:6px 8px;border-radius:5px;outline:1px dashed rgba(200,121,74,.4)}
 .slide.drag-mode [data-ie="1"]:hover{outline:1px solid rgba(200,121,74,.8);background:rgba(0,0,0,.08)}
 .slide.drag-mode [data-ie="1"].dragging{outline:2px solid var(--gold)!important;cursor:grabbing!important;z-index:50;background:rgba(0,0,0,.12)}
+.slide.drag-applied [data-ie="1"]{position:absolute!important;pointer-events:all!important;cursor:pointer}
 
 /* sa animation (content stagger) */
 .sa{opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s}
@@ -1552,25 +1553,32 @@ function toggleDragMode(){
 
 function _enterDrag(sl,idx){
   if(!sl)return;
-  const slR=sl.getBoundingClientRect();
-  const sid=(CFG[idx]||{}).id;
-  const saved=sid&&S[sid]&&S[sid]._elPos||{};
+  var sid=(CFG[idx]||{}).id;
+  var saved=sid&&S[sid]&&S[sid]._elPos||{};
+  /* if already in drag-applied state, just re-activate drag handles */
+  if(sl.classList.contains('drag-applied')){
+    sl.classList.remove('drag-applied');
+    sl.classList.add('drag-mode');
+    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+      _bindDrag(el,sl,sid);
+    });
+    return;
+  }
   /* snapshot positions BEFORE switching to absolute layout */
-  const snap={};
+  var slR=sl.getBoundingClientRect();
+  var snap={};
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    const fk=el.dataset.fk;
+    var fk=el.dataset.fk;
     if(!saved[fk]){
-      const r=el.getBoundingClientRect();
+      var r=el.getBoundingClientRect();
       snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(1)+'%',
                 t:((r.top-slR.top)/slR.height*100).toFixed(1)+'%',
                 w:(r.width/slR.width*100).toFixed(1)+'%'};
     }
   });
-  /* now switch layout */
   sl.classList.add('drag-mode');
-  /* apply positions */
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    const fk=el.dataset.fk;
+    var fk=el.dataset.fk;
     var pos=saved[fk]||snap[fk];
     if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;}
     _bindDrag(el,sl,sid);
@@ -1580,9 +1588,22 @@ function _enterDrag(sl,idx){
 function _exitDrag(sl){
   if(!sl)return;
   sl.classList.remove('drag-mode');
+  sl.classList.add('drag-applied'); /* keep absolute positions, remove handles */
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
     if(el._dOff)el._dOff();
-    el.style.left='';el.style.top='';el.style.width='';
+    el.style.cursor='pointer';
+  });
+}
+
+function _applyDragPositions(sl,idx){
+  /* apply saved positions in drag-applied mode (no drag handles) */
+  var sid=(CFG[idx]||{}).id;
+  var saved=sid&&S[sid]&&S[sid]._elPos;
+  if(!saved||!Object.keys(saved).length)return;
+  sl.classList.add('drag-applied');
+  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+    var p=saved[el.dataset.fk];
+    if(p){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;}
   });
 }
 
@@ -1629,15 +1650,21 @@ function _bindDrag(el,sl,sid){
 }
 
 function resetDragPos(){
+  var sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+  if(sl){
+    sl.classList.remove('drag-mode','drag-applied');
+    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+      if(el._dOff)el._dOff();
+      el.style.left='';el.style.top='';el.style.width='';
+    });
+  }
   var cfg=CFG[cur]; if(!cfg)return;
   if(S[cfg.id])delete S[cfg.id]._elPos;
   scheduleSave();
   if(_dragMode){
-    reRenderCur();
-    setTimeout(function(){
-      var sl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
-      if(sl)_enterDrag(sl,cur);
-    },120);
+    _dragMode=false;
+    var btn=document.getElementById('btn-drag');if(btn)btn.classList.remove('on');
+    document.getElementById('drag-bar').classList.remove('on');
   }
 }
 
@@ -1660,6 +1687,7 @@ function startP(){
   });
   setTimeout(initCharts,400);
   setTimeout(attachIE,450);
+  setTimeout(function(){var sl=Array.from(document.querySelectorAll('#sw .slide'))[0];if(sl)_applyDragPositions(sl,0);},520);
   setTimeout(initNavAutoHide,600);
   document.addEventListener('keydown',keyN);
 }
@@ -1690,12 +1718,12 @@ function reRenderCur(){
   });
   setTimeout(initCharts,100);
   updateStripActive();
-  if(_dragMode){
-    setTimeout(function(){
-      var nsl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
-      if(nsl)_enterDrag(nsl,cur);
-    },80);
-  }
+  setTimeout(function(){
+    var nsl=Array.from(document.querySelectorAll('#sw .slide'))[cur];
+    if(!nsl)return;
+    if(_dragMode)_enterDrag(nsl,cur);
+    else _applyDragPositions(nsl,cur);
+  },80);
 }
 
 function show(idx,init){
@@ -1728,13 +1756,13 @@ function show(idx,init){
   updProgress(idx,tot);
   /* apply saved alignment after transition so DOM exists */
   setTimeout(function(){applyAlignToCnt(idx);syncAlignBar();},50);
-  /* re-enter drag mode on new slide if active */
-  if(_dragMode){
-    setTimeout(function(){
-      var nsl=Array.from(document.querySelectorAll('#sw .slide'))[idx];
-      if(nsl)_enterDrag(nsl,idx);
-    },init?60:520);
-  }
+  /* apply drag positions or re-enter drag mode on new slide */
+  setTimeout(function(){
+    var nsl=Array.from(document.querySelectorAll('#sw .slide'))[idx];
+    if(!nsl)return;
+    if(_dragMode)_enterDrag(nsl,idx);
+    else _applyDragPositions(nsl,idx);
+  },init?60:520);
 }
 
 let _navHideTimer=null;
