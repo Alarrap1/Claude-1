@@ -1513,22 +1513,27 @@ function toggleDragMode(){
 
 function _enterDrag(sl,idx){
   if(!sl)return;
-  sl.classList.add('drag-mode');
   const slR=sl.getBoundingClientRect();
   const sid=(CFG[idx]||{}).id;
   const saved=sid&&S[sid]&&S[sid]._elPos||{};
+  /* snapshot positions BEFORE switching to absolute layout */
+  const snap={};
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
     const fk=el.dataset.fk;
-    if(saved[fk]){
-      el.style.left=saved[fk].l;
-      el.style.top=saved[fk].t;
-      if(saved[fk].w)el.style.width=saved[fk].w;
-    } else {
+    if(!saved[fk]){
       const r=el.getBoundingClientRect();
-      el.style.left=((r.left-slR.left)/slR.width*100).toFixed(1)+'%';
-      el.style.top=((r.top-slR.top)/slR.height*100).toFixed(1)+'%';
-      el.style.width=(r.width/slR.width*100).toFixed(1)+'%';
+      snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(1)+'%',
+                t:((r.top-slR.top)/slR.height*100).toFixed(1)+'%',
+                w:(r.width/slR.width*100).toFixed(1)+'%'};
     }
+  });
+  /* now switch layout */
+  sl.classList.add('drag-mode');
+  /* apply positions */
+  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+    const fk=el.dataset.fk;
+    var pos=saved[fk]||snap[fk];
+    if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;}
     _bindDrag(el,sl,sid);
   });
 }
