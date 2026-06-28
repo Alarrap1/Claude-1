@@ -261,6 +261,9 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .img-frame img{width:100%;height:100%;object-fit:cover;display:block}
 .img-tall{height:300px;width:320px}
 .img-wide{height:200px;width:100%}
+.img-med{height:145px;width:320px}
+.img-sm{height:95px;width:320px}
+.split-imgs{display:flex;flex-direction:column;gap:8px}
 
 /* pres nav */
 .pnav{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:rgba(0,0,0,.55);border-top:1px solid var(--w12);flex-wrap:wrap;transition:opacity .35s,transform .35s}
@@ -432,6 +435,7 @@ body[data-anim="none"] .slide.ein{opacity:1}
       <button class="btn-start" onclick="startP()">&#9654; ابدأ العرض</button>
       <button class="btn-pdf" onclick="xpdf()">&#8595; PDF تصدير</button>
       <button class="btn-io" style="width:100%;margin-bottom:2px" onclick="exportHTML()">&#8681; تحميل HTML (كامل)</button>
+      <button class="btn-io" style="width:100%;margin-bottom:2px;background:rgba(200,121,74,.18);border-color:rgba(200,121,74,.4);color:var(--gold)" onclick="showAIPrompt()">&#9998; برومت ChatGPT + استيراد</button>
       <div class="sb-io">
         <button class="btn-io" onclick="exportJSON()">&#8679; JSON</button>
         <label class="btn-io" style="cursor:pointer">&#8681; استيراد<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
@@ -459,6 +463,28 @@ body[data-anim="none"] .slide.ein{opacity:1}
       <button class="btn-add" onclick="addSec()">+ سكشن جديد</button>
     </div>
     <div id="edc"></div>
+  </div>
+</div>
+
+<!-- AI PROMPT MODAL -->
+<div id="ai-modal" style="display:none;position:fixed;inset:0;background:rgba(6,15,20,.96);z-index:500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#0d1e22;border:1px solid rgba(200,121,74,.4);border-radius:14px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:18px 22px 12px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#fff">برومت ChatGPT لإنشاء البرزنتيشن</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">انسخ البرومت، الصقه في ChatGPT مع محتواك، ثم استورد الـ JSON</div>
+      </div>
+      <button onclick="document.getElementById('ai-modal').style.display='none'" style="background:rgba(255,255,255,.06);border:none;color:rgba(255,255,255,.5);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <textarea id="ai-prompt-txt" readonly style="flex:1;background:#060f14;color:rgba(255,255,255,.75);border:none;padding:18px;font-family:monospace;font-size:11px;line-height:1.6;resize:none;direction:rtl;overflow-y:auto"></textarea>
+    <div style="padding:12px 18px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px;align-items:center">
+      <button onclick="copyAIPrompt()" style="background:var(--gold);color:#fff;border:none;border-radius:7px;padding:8px 20px;font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex:1">&#10003; نسخ البرومت</button>
+      <label style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:8px 16px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;white-space:nowrap">
+        &#8681; استيراد JSON
+        <input type="file" accept=".json" style="display:none" onchange="importAIJson(event)">
+      </label>
+      <div id="ai-copy-ok" style="color:var(--gold);font-size:11px;display:none">تم النسخ ✓</div>
+    </div>
   </div>
 </div>
 
@@ -878,15 +904,80 @@ function importJSON(ev){
   r.onload=function(e){
     try{
       const snap=JSON.parse(e.target.result);
+      /* detect AI format vs internal format */
+      if(snap._alarrap_import&&snap.slides){_importAISlides(snap.slides);return;}
       if(snap.S)Object.keys(snap.S).forEach(function(k){S[k]=snap.S[k];});
       if(snap.IM)Object.keys(snap.IM).forEach(function(k){IM[k]=snap.IM[k];});
-      saveData();
-      buildEditor();
+      saveData();buildEditor();
       alert('تم الاستيراد بنجاح ✓');
-    }catch(err){alert('خطأ في الملف');}
+    }catch(err){alert('خطأ في الملف: '+err.message);}
   };
-  r.readAsText(f);
-  ev.target.value='';
+  r.readAsText(f);ev.target.value='';
+}
+
+/* ---- AI JSON import (ChatGPT output) ---- */
+var _AI_PROMPT='أنت مساعد متخصص في بناء عروض تقديمية احترافية.\n\nمهمتك: حوّل المحتوى الذي سأعطيك إياه إلى JSON منظم يُستورد مباشرة في أداة العراب.\n\n🔴 أخرج JSON فقط — بدون أي شرح أو نص إضافي.\n\n═══ هيكل JSON ═══\n{\n  "_alarrap_import": true,\n  "slides": [ ... ]\n}\n\n═══ أنواع الشرائح ═══\n\n1. cover — الغلاف (أول شريحة دائماً):\n{"type":"cover","title":"اسم العميل","title2":"سطر ثانٍ اختياري","sub":"وصف مختصر","eyebrow":"نوع الخدمة"}\n\n2. toc — فهرس المحتويات:\n{"type":"toc","title":"المحتويات","items":["قسم 1","قسم 2","قسم 3"]}\n\n3. div — فاصل بين الأقسام:\n{"type":"div","title":"اسم القسم","sub":"وصف مختصر"}\n\n4. goal — هدف أو نص تفصيلي:\n{"type":"goal","title":"العنوان","title2":"عنوان فرعي اختياري","body":"النص التفصيلي"}\n\n5. nlist — قائمة مرقمة:\n{"type":"nlist","title":"العنوان","items":["العنصر الأول","الثاني","الثالث"]}\n\n6. blist — نقاط:\n{"type":"blist","title":"العنوان","badge":"بادج اختياري","intro":"جملة تمهيدية","items":["نقطة أولى","ثانية","ثالثة"]}\n\n7. kpi — أرقام وإحصائيات:\n{"type":"kpi","title":"النتائج","items":[{"num":"500K","lbl":"مبيعات"},{"num":"85%","lbl":"نمو"}]}\n\n8. media — شريحة صور:\n{"type":"media","title":"اسم القسم"}\n\n9. closing — الختام (آخر شريحة دائماً):\n{"type":"closing","hashtag":"#العراب"}\n\n═══ قواعد ═══\n- ابدأ بـ cover وانتهِ بـ closing\n- ضع div قبل كل قسم رئيسي\n- items في nlist/blist: من 3 إلى 6 عناصر\n- items في kpi: من 2 إلى 4 أرقام\n- body في goal: 2 إلى 4 جمل\n- النصوص موجزة ومناسبة للعروض التقديمية\n\n═══ المحتوى ═══\n[انسخ محتواك هنا]';
+
+var _AI_TYPE_MAP={
+  cover:{tag:'tc',tt:'غلاف'},goal:{tag:'tg',tt:'هدف'},nlist:{tag:'tl',tt:'قائمة'},
+  blist:{tag:'tl',tt:'نقاط'},kpi:{tag:'tk',tt:'KPI'},toc:{tag:'tl',tt:'فهرس'},
+  div:{tag:'td',tt:'فاصل'},media:{tag:'ti',tt:'صور'},closing:{tag:'tc',tt:'ختام'}
+};
+
+function _importAISlides(slides){
+  /* remove old custom slides from CFG and their data */
+  var keep=CFG.filter(function(c){return !c._custom;});
+  CFG.forEach(function(c){if(c._custom)delete S[c.id];});
+  CFG.length=0;
+  keep.forEach(function(c){CFG.push(c);});
+
+  /* clear default slides data, will repopulate from JSON */
+  /* add new slides */
+  slides.forEach(function(sl,i){
+    var type=sl.type||'goal';
+    var meta=_AI_TYPE_MAP[type]||{tag:'tl',tt:'سكشن'};
+    _ccnt++;
+    var id='ai'+_ccnt+'_'+i;
+    var label=sl.title||('شريحة '+(i+1));
+    var cfg={id:id,type:type,label:label,tag:meta.tag,tt:meta.tt,fields:FTPL[type]||FTPL.goal,_custom:true};
+    CFG.push(cfg);
+    /* populate data */
+    var d={};
+    ['title','title2','sub','eyebrow','body','badge','intro','hashtag'].forEach(function(k){if(sl[k]!==undefined)d[k]=sl[k];});
+    if(sl.items)d.items=sl.items;
+    S[id]=d;
+  });
+  saveData();buildEditor();
+  document.getElementById('ai-modal').style.display='none';
+  alert('تم الاستيراد بنجاح — '+slides.length+' شريحة ✓\nيمكنك الآن إضافة الصور وتشغيل العرض.');
+}
+
+function importAIJson(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const snap=JSON.parse(e.target.result);
+      if(snap._alarrap_import&&snap.slides){_importAISlides(snap.slides);}
+      else{alert('الملف لا يبدو JSON من ChatGPT. تأكد من استخدام البرومت الصحيح.');}
+    }catch(err){alert('خطأ في الملف: '+err.message);}
+  };
+  r.readAsText(f);ev.target.value='';
+}
+
+function showAIPrompt(){
+  document.getElementById('ai-prompt-txt').value=_AI_PROMPT;
+  document.getElementById('ai-modal').style.display='flex';
+  document.getElementById('ai-copy-ok').style.display='none';
+}
+
+function copyAIPrompt(){
+  const txt=document.getElementById('ai-prompt-txt');
+  txt.select();
+  document.execCommand('copy');
+  const ok=document.getElementById('ai-copy-ok');
+  ok.style.display='block';
+  setTimeout(function(){ok.style.display='none';},2500);
 }
 
 /* ================================================================
@@ -1131,9 +1222,9 @@ function dtblAdd(sid,fk){
    ================================================================ */
 let _ccnt=0;
 const FTPL={
-  goal:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'body',l:'نص',t:'ta',cls:'lg'},{k:'img0',l:'صورة',t:'img1',idx:0}],
-  nlist:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'items',l:'العناصر',t:'dl',ph:'العنصر...',cnt:3},{k:'img0',l:'صورة',t:'img1',idx:0}],
-  blist:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'badge',l:'Badge',t:'fi',ph:''},{k:'intro',l:'تمهيد',t:'ta',cls:'sm'},{k:'items',l:'النقاط',t:'dl',ph:'النقطة...',cnt:4},{k:'img0',l:'صورة',t:'img1',idx:0}],
+  goal:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'body',l:'نص',t:'ta',cls:'lg'},{k:'img0',l:'صورة 1',t:'img1',idx:0},{k:'img1',l:'صورة 2',t:'img1',idx:1},{k:'img2',l:'صورة 3',t:'img1',idx:2}],
+  nlist:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'items',l:'العناصر',t:'dl',ph:'العنصر...',cnt:3},{k:'img0',l:'صورة 1',t:'img1',idx:0},{k:'img1',l:'صورة 2',t:'img1',idx:1},{k:'img2',l:'صورة 3',t:'img1',idx:2}],
+  blist:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'badge',l:'Badge',t:'fi',ph:''},{k:'intro',l:'تمهيد',t:'ta',cls:'sm'},{k:'items',l:'النقاط',t:'dl',ph:'النقطة...',cnt:4},{k:'img0',l:'صورة 1',t:'img1',idx:0},{k:'img1',l:'صورة 2',t:'img1',idx:1},{k:'img2',l:'صورة 3',t:'img1',idx:2}],
   kpi:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'items',l:'KPIs',t:'dk',cnt:3}],
   toc:[{k:'title',l:'عنوان',t:'fi',ph:'العنوان'},{k:'items',l:'العناصر',t:'dl',ph:'القسم...',cnt:4}],
   div:[{k:'title',l:'عنوان الفاصل',t:'fi',ph:'العنوان'},{k:'sub',l:'فرعي',t:'fi',ph:''},{k:'img0',l:'صورة خلفية',t:'img1',idx:0}],
@@ -1247,14 +1338,20 @@ function getSavedStyle(sid,fk){
    ================================================================ */
 function lSlide(c, titleHtml, bodyHtml){
   const s=S[c.id]||{};
-  const img0=gImg(c.id,0);
+  const img0=gImg(c.id,0), img1=gImg(c.id,1), img2=gImg(c.id,2);
+  const imgCount=[img0,img1,img2].filter(Boolean).length;
   const chr=mkChr(CFG.indexOf(c));
   let eff=getLayout(c.id);
   if(eff==='auto') eff=img0?'rt':'text';
   if(!img0&&eff!=='text') eff='text';
 
-  const imgEl=img0?'<div class="img-frame img-tall" data-ie="1" data-sid="'+c.id+'" data-fk="img0" data-fl="الصورة"><img src="'+img0+'" alt=""></div>':'';
-  const imgWideEl=img0?'<div class="img-frame img-wide" data-ie="1" data-sid="'+c.id+'" data-fk="img0" data-fl="الصورة"><img src="'+img0+'" alt=""></div>':'';
+  /* build image column - adapts height by count */
+  function mkImgEl(src,fk,cls){
+    return src?'<div class="img-frame '+cls+'" data-ie="1" data-sid="'+c.id+'" data-fk="'+fk+'" data-fl="صورة"><img src="'+src+'" alt=""></div>':'';
+  }
+  const imgCls=imgCount===1?'img-tall':imgCount===2?'img-med':'img-sm';
+  const imgEl=img0?'<div class="split-imgs">'+mkImgEl(img0,'img0',imgCls)+mkImgEl(img1,'img1',imgCls)+mkImgEl(img2,'img2',imgCls)+'</div>':'';
+  const imgWideEl=img0?'<div class="split-imgs">'+mkImgEl(img0,'img0','img-wide')+mkImgEl(img1,'img1','img-wide')+mkImgEl(img2,'img2','img-wide')+'</div>':'';
 
   if(eff==='text') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+bodyHtml+'</div></div>';
   if(eff==='rt') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split" style="flex:1;min-height:0;align-self:stretch"><div class="split-txt">'+bodyHtml+'</div><div class="split-img">'+imgEl+'</div></div></div></div>';
