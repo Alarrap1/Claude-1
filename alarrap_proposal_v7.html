@@ -249,7 +249,7 @@ body[data-anim="none"] .slide.ein{opacity:1}
 
 /* split layout */
 .split{display:flex;gap:36px;align-items:center;width:100%;max-width:960px;direction:rtl}
-.split-txt{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.split-txt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:10px;overflow:hidden}
 .split-img{width:320px;flex-shrink:0}
 .split.rev{direction:ltr}
 .split.rev .split-txt{align-items:flex-start}
@@ -1251,10 +1251,10 @@ function lSlide(c, titleHtml, bodyHtml){
   const imgWideEl=img0?'<div class="img-frame img-wide"><img src="'+img0+'" alt=""></div>':'';
 
   if(eff==='text') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+bodyHtml+'</div></div>';
-  if(eff==='rt') return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:stretch"><div class="split"><div class="split-txt">'+titleHtml+bodyHtml+'</div><div class="split-img">'+imgEl+'</div></div></div></div>';
-  if(eff==='lr') return '<div class="slide">'+chr+'<div class="s-cnt" style="align-items:stretch"><div class="split rev"><div class="split-img">'+imgEl+'</div><div class="split-txt">'+titleHtml+bodyHtml+'</div></div></div></div>';
-  if(eff==='top') return '<div class="slide">'+chr+'<div class="s-cnt"><div class="split-top"><div class="split-txt">'+titleHtml+bodyHtml+'</div>'+imgWideEl+'</div></div></div>';
-  if(eff==='bot') return '<div class="slide">'+chr+'<div class="s-cnt"><div class="split-bot">'+imgWideEl+'<div class="split-txt">'+titleHtml+bodyHtml+'</div></div></div></div>';
+  if(eff==='rt') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split" style="flex:1;min-height:0;align-self:stretch"><div class="split-txt">'+bodyHtml+'</div><div class="split-img">'+imgEl+'</div></div></div></div>';
+  if(eff==='lr') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split rev" style="flex:1;min-height:0;align-self:stretch"><div class="split-img">'+imgEl+'</div><div class="split-txt">'+bodyHtml+'</div></div></div></div>';
+  if(eff==='top') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split-top" style="flex:1;min-height:0">'+imgWideEl+'<div class="split-txt">'+bodyHtml+'</div></div></div></div>';
+  if(eff==='bot') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split-bot" style="flex:1;min-height:0"><div class="split-txt">'+bodyHtml+'</div>'+imgWideEl+'</div></div></div></div>';
   if(eff==='bg'){
     const bgStyle=img0?'background-image:url('+JSON.stringify(img0)+');background-size:cover;background-position:center':'';
     return '<div class="slide" style="'+bgStyle+'"><div style="position:absolute;inset:0;background:rgba(6,15,20,.7);z-index:1"></div>'+chr+'<div class="s-cnt" style="z-index:2">'+titleHtml+bodyHtml+'</div></div>';
