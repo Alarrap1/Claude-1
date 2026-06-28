@@ -1624,7 +1624,7 @@ function _enterDrag(sl,idx){
     if(cnt2)Array.from(cnt2.children).forEach(function(el){
       if(el.dataset&&el.dataset.ie==='1')return;
       var k=_sntKey(el), p=savedSnt[k];
-      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;el.style.height=p.h;}
     });
     sl.querySelectorAll('[data-ie="1"]').forEach(function(el){_bindDrag(el);});
     _injectGuides(sl);
@@ -1638,7 +1638,8 @@ function _enterDrag(sl,idx){
     var r=el.getBoundingClientRect();
     var pos={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
              t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
-             w:(r.width/slR.width*100).toFixed(2)+'%'};
+             w:(r.width/slR.width*100).toFixed(2)+'%',
+             h:(r.height/slR.height*100).toFixed(2)+'%'};
     if(el.dataset&&el.dataset.ie==='1'){
       var fk=el.dataset.fk; if(!saved[fk])snap[fk]=pos;
     } else {
@@ -1651,7 +1652,7 @@ function _enterDrag(sl,idx){
     Array.from(cnt.children).forEach(function(el){
       if(el.dataset&&el.dataset.ie==='1')return;
       var k=_sntKey(el), p=savedSnt[k]||snapSnt[k];
-      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;el.style.height=p.h;}
     });
     if(_dgSid){
       if(!S[_dgSid])S[_dgSid]={};
@@ -1697,7 +1698,7 @@ function _applyDragPositions(sl,idx){
     if(cnt)Array.from(cnt.children).forEach(function(el){
       if(el.dataset&&el.dataset.ie==='1')return;
       var p=savedSnt[_sntKey(el)];
-      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;}
+      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;el.style.height=p.h;}
     });
   }
 }
