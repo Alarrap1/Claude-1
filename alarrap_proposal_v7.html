@@ -925,14 +925,11 @@ var _AI_TYPE_MAP={
 };
 
 function _importAISlides(slides){
-  /* remove old custom slides from CFG and their data */
-  var keep=CFG.filter(function(c){return !c._custom;});
-  CFG.forEach(function(c){if(c._custom)delete S[c.id];});
+  /* wipe ALL existing slides completely */
+  CFG.forEach(function(c){delete S[c.id];});
   CFG.length=0;
-  keep.forEach(function(c){CFG.push(c);});
 
-  /* clear default slides data, will repopulate from JSON */
-  /* add new slides */
+  /* add slides from JSON */
   slides.forEach(function(sl,i){
     var type=sl.type||'goal';
     var meta=_AI_TYPE_MAP[type]||{tag:'tl',tt:'سكشن'};
@@ -949,7 +946,10 @@ function _importAISlides(slides){
   });
   saveData();buildEditor();
   document.getElementById('ai-modal').style.display='none';
-  alert('تم الاستيراد بنجاح — '+slides.length+' شريحة ✓\nيمكنك الآن إضافة الصور وتشغيل العرض.');
+  /* rebuild nav if present */
+  if(typeof _buildNav==='function')_buildNav();
+  var nb=document.getElementById('sbn');if(nb){nb.innerHTML='';CFG.forEach(function(c,i){_buildNavItem(c,i);});}
+  alert('تم الاستيراد بنجاح — '+slides.length+' شريحة ✓\nأضف الصور ثم اضغط «ابدأ العرض».');
 }
 
 function importAIJson(ev){
