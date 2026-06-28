@@ -191,6 +191,7 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .s-cnt.vl-b{justify-content:flex-end}
 .sl-ttl{font-size:clamp(22px,3.5vw,42px);font-weight:900;color:var(--w);text-align:right;line-height:1.15}
 .sl-ttl .ac{color:var(--gold)}
+.sl-ttl2{font-size:clamp(14px,2vw,28px);font-weight:700;color:var(--gold);text-align:right;line-height:1.2}
 .sl-body{font-size:clamp(13px,1.6vw,18px);color:var(--w55);text-align:right;line-height:1.75;max-width:680px}
 
 /* cover */
@@ -258,7 +259,7 @@ body[data-anim="none"] .slide.ein{opacity:1}
 .split-bot{display:flex;flex-direction:column;align-items:center;width:100%;max-width:860px;gap:16px}
 .img-frame{border-radius:10px;overflow:hidden;border:1px solid var(--w12);background:rgba(255,255,255,.03)}
 .img-frame img{width:100%;height:100%;object-fit:cover;display:block}
-.img-tall{height:300px}
+.img-tall{height:300px;width:320px}
 .img-wide{height:200px;width:100%}
 
 /* pres nav */
@@ -326,8 +327,13 @@ body[data-anim="none"] .slide.ein{opacity:1}
 
 /* free drag mode - NO transitions on elements to avoid lag */
 .slide.drag-mode .s-cnt,.slide.drag-applied .s-cnt{position:absolute!important;inset:0!important;display:block!important;max-width:100%!important;padding:0!important;pointer-events:none}
-.slide.drag-mode .s-cnt>*,.slide.drag-applied .s-cnt>*{position:absolute!important}
-.slide.drag-mode [data-ie="1"],.slide.drag-applied [data-ie="1"]{pointer-events:all!important;transition:none!important;user-select:none}
+/* non-draggable direct children (cv-bar, bl-badge etc) go absolute */
+.slide.drag-mode .s-cnt>*:not([data-ie="1"]),.slide.drag-applied .s-cnt>*:not([data-ie="1"]){position:absolute!important}
+/* wrapper containers become transparent to layout so nested [data-ie] can be freely positioned */
+.slide.drag-mode .split,.slide.drag-mode .split-txt,.slide.drag-mode .split-img,.slide.drag-mode .split-top,.slide.drag-mode .split-bot,
+.slide.drag-applied .split,.slide.drag-applied .split-txt,.slide.drag-applied .split-img,.slide.drag-applied .split-top,.slide.drag-applied .split-bot{display:contents!important}
+/* ALL [data-ie="1"] elements become freely positionable on the slide canvas */
+.slide.drag-mode [data-ie="1"],.slide.drag-applied [data-ie="1"]{position:absolute!important;pointer-events:all!important;transition:none!important;user-select:none}
 .slide.drag-mode [data-ie="1"]{cursor:grab;outline:1px dashed rgba(200,121,74,.5);border-radius:4px}
 .slide.drag-mode [data-ie="1"].dg-sel{outline:2px solid var(--gold)!important;cursor:grab;z-index:40}
 .slide.drag-mode [data-ie="1"].dg-dragging{cursor:grabbing!important;z-index:50;outline:2px solid var(--gold2)!important}
@@ -1247,8 +1253,8 @@ function lSlide(c, titleHtml, bodyHtml){
   if(eff==='auto') eff=img0?'rt':'text';
   if(!img0&&eff!=='text') eff='text';
 
-  const imgEl=img0?'<div class="img-frame img-tall"><img src="'+img0+'" alt=""></div>':'';
-  const imgWideEl=img0?'<div class="img-frame img-wide"><img src="'+img0+'" alt=""></div>':'';
+  const imgEl=img0?'<div class="img-frame img-tall" data-ie="1" data-sid="'+c.id+'" data-fk="img0" data-fl="الصورة"><img src="'+img0+'" alt=""></div>':'';
+  const imgWideEl=img0?'<div class="img-frame img-wide" data-ie="1" data-sid="'+c.id+'" data-fk="img0" data-fl="الصورة"><img src="'+img0+'" alt=""></div>':'';
 
   if(eff==='text') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+bodyHtml+'</div></div>';
   if(eff==='rt') return '<div class="slide">'+chr+'<div class="s-cnt">'+titleHtml+'<div class="split" style="flex:1;min-height:0;align-self:stretch"><div class="split-txt">'+bodyHtml+'</div><div class="split-img">'+imgEl+'</div></div></div></div>';
@@ -1265,7 +1271,10 @@ function lSlide(c, titleHtml, bodyHtml){
 function ttlHtml(c){
   const s=S[c.id]||{};
   const st=getSavedStyle(c.id,'title');
-  return '<div class="sl-ttl" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان"'+(st?' style="'+xE(st)+'"':'')+'>'+xE(s.title||'')+(s.title2?'<br><span class="ac">'+xE(s.title2)+'</span>':'')+'</div>';
+  const st2=getSavedStyle(c.id,'title2');
+  let h='<div class="sl-ttl" data-ie="1" data-sid="'+c.id+'" data-fk="title" data-fl="العنوان"'+(st?' style="'+xE(st)+'"':'')+'>'+xE(s.title||'')+'</div>';
+  if(s.title2)h+='<div class="sl-ttl2" data-ie="1" data-sid="'+c.id+'" data-fk="title2" data-fl="العنوان الفرعي"'+(st2?' style="'+xE(st2)+'"':'')+'>'+xE(s.title2)+'</div>';
+  return h;
 }
 
 /* ================================================================
@@ -1616,38 +1625,58 @@ function _enterDrag(sl,idx){
   _dgSl=sl; _dgSid=(CFG[idx]||{}).id;
   var saved=_dgSid&&S[_dgSid]&&S[_dgSid]._elPos||{};
   var savedSnt=_dgSid&&S[_dgSid]&&S[_dgSid]._sntPos||{};
+
   if(sl.classList.contains('drag-applied')){
+    /* re-enter: restore all positions that were explicitly user-moved */
     sl.classList.remove('drag-applied');
     sl.classList.add('drag-mode');
-    /* restore non-draggable sibling positions */
+    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+      var p=saved[el.dataset.fk];
+      if(p&&p.moved){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;if(p.h)el.style.height=p.h;if(p.z)el.style.zIndex=p.z;}
+      _bindDrag(el);
+    });
+    /* restore non-draggable direct children */
     var cnt2=sl.querySelector('.s-cnt');
     if(cnt2)Array.from(cnt2.children).forEach(function(el){
       if(el.dataset&&el.dataset.ie==='1')return;
       var k=_sntKey(el), p=savedSnt[k];
       if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;el.style.height=p.h;}
     });
-    sl.querySelectorAll('[data-ie="1"]').forEach(function(el){_bindDrag(el);});
     _injectGuides(sl);
     return;
   }
-  /* snapshot ALL .s-cnt direct children BEFORE switching layout */
+
+  /* snapshot ALL [data-ie="1"] at any depth BEFORE switching layout */
   var slR=sl.getBoundingClientRect();
   var snap={}, snapSnt={};
-  var cnt=sl.querySelector('.s-cnt');
-  if(cnt)Array.from(cnt.children).forEach(function(el){
-    var r=el.getBoundingClientRect();
-    var pos={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
-             t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
-             w:(r.width/slR.width*100).toFixed(2)+'%',
-             h:(r.height/slR.height*100).toFixed(2)+'%'};
-    if(el.dataset&&el.dataset.ie==='1'){
-      var fk=el.dataset.fk; if(!saved[fk])snap[fk]=pos;
-    } else {
-      var k=_sntKey(el); if(!savedSnt[k])snapSnt[k]=pos;
+  sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
+    var fk=el.dataset.fk;
+    /* only snapshot if no user-moved position exists */
+    if(!saved[fk]||!saved[fk].moved){
+      var r=el.getBoundingClientRect();
+      snap[fk]={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
+                t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
+                w:(r.width/slR.width*100).toFixed(2)+'%',
+                h:(r.height/slR.height*100).toFixed(2)+'%'};
     }
   });
+  /* snapshot non-draggable direct children of .s-cnt */
+  var cnt=sl.querySelector('.s-cnt');
+  if(cnt)Array.from(cnt.children).forEach(function(el){
+    if(el.dataset&&el.dataset.ie==='1')return;
+    var k=_sntKey(el);
+    if(!savedSnt[k]){
+      var r=el.getBoundingClientRect();
+      snapSnt[k]={l:((r.left-slR.left)/slR.width*100).toFixed(2)+'%',
+                  t:((r.top-slR.top)/slR.height*100).toFixed(2)+'%',
+                  w:(r.width/slR.width*100).toFixed(2)+'%',
+                  h:(r.height/slR.height*100).toFixed(2)+'%'};
+    }
+  });
+
   sl.classList.add('drag-mode');
-  /* apply positions to ALL children */
+
+  /* apply positions to non-draggable direct children */
   if(cnt){
     Array.from(cnt.children).forEach(function(el){
       if(el.dataset&&el.dataset.ie==='1')return;
@@ -1659,8 +1688,11 @@ function _enterDrag(sl,idx){
       S[_dgSid]._sntPos=Object.assign({},savedSnt,snapSnt);
     }
   }
+
+  /* apply positions to ALL [data-ie="1"] */
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    var fk=el.dataset.fk, pos=saved[fk]||snap[fk];
+    var fk=el.dataset.fk;
+    var pos=(saved[fk]&&saved[fk].moved)?saved[fk]:snap[fk];
     if(pos){el.style.left=pos.l;el.style.top=pos.t;if(pos.w)el.style.width=pos.w;if(pos.h)el.style.height=pos.h;if(pos.z)el.style.zIndex=pos.z;}
     _bindDrag(el);
   });
@@ -1686,21 +1718,14 @@ function _exitDrag(sl){
 function _applyDragPositions(sl,idx){
   var sid=(CFG[idx]||{}).id;
   var saved=sid&&S[sid]&&S[sid]._elPos;
-  var savedSnt=sid&&S[sid]&&S[sid]._sntPos;
-  if((!saved||!Object.keys(saved).length)&&(!savedSnt||!Object.keys(savedSnt).length))return;
+  /* only activate drag-applied if at least one element was explicitly user-moved */
+  var hasUserMoved=saved&&Object.keys(saved).some(function(k){return saved[k]&&saved[k].moved;});
+  if(!hasUserMoved)return;
   sl.classList.add('drag-applied');
   sl.querySelectorAll('[data-ie="1"]').forEach(function(el){
-    var p=saved&&saved[el.dataset.fk];
-    if(p){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;if(p.h)el.style.height=p.h;if(p.z)el.style.zIndex=p.z;}
+    var p=saved[el.dataset.fk];
+    if(p&&p.moved){el.style.left=p.l;el.style.top=p.t;if(p.w)el.style.width=p.w;if(p.h)el.style.height=p.h;if(p.z)el.style.zIndex=p.z;}
   });
-  if(savedSnt){
-    var cnt=sl.querySelector('.s-cnt');
-    if(cnt)Array.from(cnt.children).forEach(function(el){
-      if(el.dataset&&el.dataset.ie==='1')return;
-      var p=savedSnt[_sntKey(el)];
-      if(p){el.style.left=p.l;el.style.top=p.t;el.style.width=p.w;el.style.height=p.h;}
-    });
-  }
 }
 
 /* ---- bind move drag to element ---- */
@@ -1909,7 +1934,7 @@ function _saveElPos(el){
   if(!_dgSid||!el)return;
   if(!S[_dgSid])S[_dgSid]={};
   if(!S[_dgSid]._elPos)S[_dgSid]._elPos={};
-  var p={l:el.style.left,t:el.style.top,w:el.style.width};
+  var p={l:el.style.left,t:el.style.top,w:el.style.width,moved:true};
   if(el.style.height)p.h=el.style.height;
   if(el.style.zIndex)p.z=el.style.zIndex;
   S[_dgSid]._elPos[el.dataset.fk]=p;
